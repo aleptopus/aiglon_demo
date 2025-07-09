@@ -31,7 +31,13 @@
                             </button>
                             <p id="csvFileName" class="file-name-display">Aucun fichier</p>
                         </div>
-                        <!-- TMA File Upload Section Removed -->
+                        <div class="upload-section">
+                            <input type="file" id="jsonFileInput" accept=".json" style="display: none;">
+                            <button onclick="document.getElementById('jsonFileInput').click()" class="button">
+                                Charger Fichier TMA (.json)
+                            </button>
+                            <p id="jsonFileName" class="file-name-display">Aucun fichier</p>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -49,11 +55,17 @@
                     </div>
                     <div class="toggles-container">
                         <div class="filter-group-vertical">
-                            <label for="periodSelect">Période</label>
+                            <label for="periodSelect">Période de Grille</label>
                             <select id="periodSelect" class="select-dropdown">
-                                <option value="Hiv">Hiver</option>
-                                <option value="Cha" selected>Chargée</option>
-                                <option value="Cre">Creuse</option>
+                                <option value="SemCha" selected>Semaine Chargée</option>
+                                <option value="SamCha">Samedi Chargé</option>
+                                <option value="DimCha">Dimanche Chargé</option>
+                                <option value="SemCre">Semaine Creuse</option>
+                                <option value="SamCre">Samedi Creux</option>
+                                <option value="DimCre">Dimanche Creux</option>
+                                <option value="SemHiv">Semaine Hiver</option>
+                                <option value="SamHiv">Samedi Hiver</option>
+                                <option value="DimHiv">Dimanche Hiver</option>
                             </select>
                         </div>
                         <div class="filter-group-vertical">

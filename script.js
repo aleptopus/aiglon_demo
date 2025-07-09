@@ -2,8 +2,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements & State ---
     const elements = {
         csvFile: document.getElementById('csvFileInput'),
+        jsonFile: document.getElementById('jsonFileInput'), // Restored
         csvName: document.getElementById('csvFileName'),
-        // References to jsonFile, grilleFile, compoFile and their displays/buttons removed as data is bundled or default.
+        jsonName: document.getElementById('jsonFileName'),   // Restored
+        jsonButton: document.querySelector('button[onclick*="jsonFileInput"]'), // Restored
         initialMsg: document.getElementById('initialMessage'),
         dashboard: document.getElementById('dashboardContent'),
         dateStartInput: document.getElementById('dateStartInput'),
@@ -102,14 +104,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Event Listeners ---
     elements.csvFile.addEventListener('change', handleCohorFile);
+    elements.jsonFile.addEventListener('change', handleTmaFile); // Restored
     elements.toggleChartBtn.addEventListener('click', toggleChartStacking);
-    [elements.dateStartInput, elements.dateEndInput].forEach(el => el.addEventListener('change', updateFromDateInputs));
+    [elements.dateStartInput, elements.dateEndInput].forEach(el => {
+        if (el) {
+            el.addEventListener('change', updateFromDateInputs);
+        }
+    });
     [elements.staffMatin, elements.staffJour, elements.staffNuit, elements.sivSlider, elements.periodSelect, elements.sivSelect].forEach(el => {
-        if (el) el.addEventListener('input', () => updateDashboard(false));
+        if (el) {
+            el.addEventListener('input', () => {
+                updateDashboard(false);
+            });
+        }
     });
 
     initializeCapacityCalculator();
-    loadDefaultTmaData();
+    // loadDefaultTmaData(); // Removed call, will be loaded via file input
 
     function handleCohorFile(event) {
         const file = event.target.files[0];
@@ -146,45 +157,50 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsText(file, 'UTF-8');
     }
 
-    async function loadDefaultTmaData() {
+    function handleTmaFile(event) { // Restored function
+        const file = event.target.files[0];
+        if (!file) return;
+        if (elements.jsonName) elements.jsonName.textContent = file.name;
         tmaDataLoaded = false;
-        try {
-            const response = await fetch('2024_TMA_horaire_60min.json');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const tmaJsonText = await response.text();
-            state.tmaMap = processTmaJSON(tmaJsonText);
-            if (state.tmaMap.size === 0) {
-                 console.warn("Default TMA data processed but resulted in an empty map.");
-            } else {
-                console.log("Default TMA data processed successfully.");
-            }
-        } catch (error) {
-            console.error("Could not load or process default TMA data:", error);
-            state.tmaMap = new Map();
-            if (elements.initialMsg) {
-                elements.initialMsg.innerHTML = `<p style="color: red;">Erreur: Impossible de charger les données TMA (${error.message}). Certaines fonctionnalités seront affectées.</p>`;
-                if (elements.initialMsg.classList.contains('hidden')) {
-                     elements.initialMsg.classList.remove('hidden');
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                state.tmaMap = processTmaJSON(e.target.result);
+                if (state.tmaMap.size === 0) {
+                    alert("Aucune donnée TMA trouvée ou traitée dans le fichier JSON.");
+                     if (elements.jsonName) elements.jsonName.textContent = "Erreur fichier ou données";
                 }
-            } else {
-                 alert(`Erreur: Impossible de charger les données TMA (${error.message}). L'application pourrait ne pas fonctionner correctement.`);
+            } catch (error) {
+                console.error("Error processing TMA JSON:", error);
+                alert(`Erreur lors du traitement du fichier TMA: ${error.message}`);
+                if (elements.jsonName) elements.jsonName.textContent = "Erreur de traitement";
+                state.tmaMap = new Map();
+            } finally {
+                tmaDataLoaded = true;
+                attemptInitializeDashboard();
             }
-        } finally {
+        };
+        reader.onerror = () => {
+            console.error("FileReader error for TMA JSON.");
+            alert("Erreur de lecture du fichier TMA.");
+            if (elements.jsonName) elements.jsonName.textContent = "Erreur de lecture";
+            state.tmaMap = new Map();
             tmaDataLoaded = true;
             attemptInitializeDashboard();
-        }
+        };
+        reader.readAsText(file, 'UTF-8');
     }
+
+    // async function loadDefaultTmaData() { ... } // This function is removed
 
     function initializeDashboard() {
         elements.initialMsg.classList.add('hidden');
         elements.dashboard.classList.remove('hidden');
-        // elements.jsonButton.disabled = false; // Removed
-        // elements.grilleButton.disabled = false; // No longer needed
+        if (elements.jsonButton) elements.jsonButton.disabled = false;
         [elements.dateStartInput, elements.dateEndInput].forEach(el => el.disabled = false);
 
-        combineAllData(); // This must run after both cohorData and tmaMap are populated.
+        combineAllData();
         const dates = [...new Set(state.combinedData.map(d => d.date.getTime()))].sort();
         state.fullDateRange = [new Date(dates[0]), new Date(dates[dates.length - 1])];
         

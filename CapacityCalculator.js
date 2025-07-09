@@ -152,25 +152,38 @@ class CapacityCalculator {
     return resultSeries;
   }
 
-  calculateDailyCapacity(date, activeVacations, sivHypothesis = 'VFR fort', forcedPeriod = null) {
-    const { periodCode: dateDerivedPeriod, dayType } = this.getPeriodAndDayType(date);
-    const actualPeriodCode = forcedPeriod || dateDerivedPeriod;
+  calculateDailyCapacity(date, activeVacations, sivHypothesis = 'VFR fort', combinedPeriodKey = null) {
+    let dayTypeToUse;
+    let periodCodeToUse;
 
-    // Ensure actualPeriodCode is one of "Hiv", "Cha", "Cre"
-    const validPeriods = ["Hiv", "Cha", "Cre"];
-    if (!validPeriods.includes(actualPeriodCode)) {
-        console.warn(`Invalid period code: ${actualPeriodCode}. Defaulting to date-derived or 'Cha'.`);
-        // Fallback if forcedPeriod is somehow invalid
-        this.periodCodeForGrid = validPeriods.includes(dateDerivedPeriod) ? dateDerivedPeriod : "Cha";
+    if (combinedPeriodKey) {
+        // Example: combinedPeriodKey = "SemCha"
+        dayTypeToUse = combinedPeriodKey.substring(0, 3); // "Sem", "Sam", or "Dim"
+        periodCodeToUse = combinedPeriodKey.substring(3);    // "Cha", "Cre", or "Hiv"
+
+        const validDayTypes = ["Sem", "Sam", "Dim"];
+        const validPeriodCodes = ["Hiv", "Cha", "Cre"];
+
+        if (!validDayTypes.includes(dayTypeToUse) || !validPeriodCodes.includes(periodCodeToUse)) {
+            console.warn(`Invalid combinedPeriodKey: ${combinedPeriodKey}. Falling back to date-derived period/dayType.`);
+            const { periodCode: dateDerivedPeriod, dayType: dateDerivedDayType } = this.getPeriodAndDayType(date);
+            dayTypeToUse = dateDerivedDayType;
+            periodCodeToUse = dateDerivedPeriod;
+        }
     } else {
-        this.periodCodeForGrid = actualPeriodCode; // Store for SIV reduction use if needed
+        // Fallback to original logic if no combinedPeriodKey is provided
+        const { periodCode: dateDerivedPeriod, dayType: dateDerivedDayType } = this.getPeriodAndDayType(date);
+        dayTypeToUse = dateDerivedDayType;
+        periodCodeToUse = dateDerivedPeriod;
     }
 
-    const grid = this.vacationGrids[dayType]?.[this.periodCodeForGrid];
+    this.periodCodeForGrid = periodCodeToUse; // Used by SIV reduction, matches grid period
+
+    const grid = this.vacationGrids[dayTypeToUse]?.[periodCodeToUse];
 
     if (!grid || grid.length === 0) {
-      console.warn(`No vacation grid found for ${dayType}/${this.periodCodeForGrid}. Returning zero capacity.`);
-      return Array(96).fill(0); // 96 periods of 15 minutes in a day
+      console.warn(`No vacation grid found for ${dayTypeToUse}/${periodCodeToUse}. Returning zero capacity.`);
+      return { capacities: Array(96).fill(0), effectiveAgents: Array(96).fill(0) };
     }
 
     const selectedAgentProfiles = this.selectAgentProfiles(grid);
