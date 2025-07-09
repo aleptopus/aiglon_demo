@@ -22,6 +22,13 @@
 - [x] **Priorités d'agents corrigées** : La priorité est maintenant l'ordre d'apparition dans le fichier
 - [x] **Sélection d'agents fonctionnelle** : Les agents non-chefs sont correctement sélectionnés
 - [x] **Affichage des courbes** : Les calculs de capacité génèrent maintenant des valeurs non nulles
+- [x] **Comptage agents actifs corrigé** : Seuls les agents avec '1' comptent (pas les chefs 'C')
+- [x] **Fuseau horaire SIV corrigé** : Les règles SIV sont maintenant appliquées en UTC
+- [x] **Interface de sélection d'agents** : Ajout de boutons pour sélectionner/désélectionner les agents
+- [x] **Effectif nominal corrigé** : Passage de 7 SN à 8 SN (3 Je + 8 M + 8 J + 8 SN)
+- [x] **Courbe en escalier** : Ajout du paramètre `stepped: true` pour un rendu sans lissage
+- [x] **Pas de 15 minutes** : Calcul sur 96 créneaux de 15 min avec moyenne glissante de 60 min
+- [x] **Élimination des valeurs nulles** : Plus de capacité à zéro avec l'effectif nominal
 
 ## 🔄 En cours
 

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Agents 05h00</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #2a2d3a; color: white; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .debug-info { background: #3a3d4a; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .agent { background: #1a1d2a; padding: 8px; margin: 3px 0; border-radius: 4px; }
+        .active { background: #44aa44; }
+        .inactive { background: #aa4444; }
+        pre { background: #1a1d2a; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Debug Agents 05h00 UTC</h1>
+        
+        <div class="debug-info">
+            <h3>Agents sélectionnés et leur statut à 05:00:00</h3>
+            <div id="agentStatus"></div>
+        </div>
+
+        <div class="debug-info">
+            <h3>Détails de comptage</h3>
+            <div id="countDetails"></div>
+        </div>
+    </div>
+
+    <script src="staffingMap.js"></script>
+    <script src="sivRules.js"></script>
+    <script src="vacationGrids.js"></script>
+    <script src="CapacityCalculator.js"></script>
+    
+    <script>
+        const calculator = new CapacityCalculator(staffingMap, sivRules, vacationGrids);
+        
+        function debugAgents05h() {
+            console.log('=== DEBUG AGENTS 05H00 ===');
+            
+            // Analyser la grille SemCha
+            const dayType = 'Sem';
+            const periodCode = 'Cha';
+            const timeSlot = '05:00:00';
+            
+            const grid = vacationGrids[dayType]?.[periodCode];
+            if (!grid) {
+                document.getElementById('agentStatus').innerHTML = '<p style="color: red;">Grille non trouvée!</p>';
+                return;
+            }
+            
+            // Sélectionner les agents
+            const selectedAgents = calculator.selectAgentProfiles(grid);
+            console.log('Agents sélectionnés:', selectedAgents);
+            
+            // Analyser chaque agent sélectionné
+            let agentStatusHtml = '';
+            let activeCount = 0;
+            let totalSelected = 0;
+            
+            for (const [index, agent] of Object.entries(selectedAgents)) {
+                totalSelected++;
+                const value = agent[timeSlot];
+                const isActive = value === '1';
+                if (isActive) activeCount++;
+                
+                const statusClass = isActive ? 'active' : 'inactive';
+                agentStatusHtml += `
+                    <div class="agent ${statusClass}">
+                        <strong>${agent.vacation}</strong> (Index ${index}): 
+                        Valeur à ${timeSlot} = "${value}" 
+                        ${isActive ? '✓ ACTIF' : '✗ INACTIF'}
+                    </div>
+                `;
+                
+                console.log(`Agent ${agent.vacation}: ${timeSlot} = "${value}" (${isActive ? 'ACTIF' : 'INACTIF'})`);
+            }
+            
+            // Vérifier avec la fonction countActiveAgents
+            const calculatedCount = calculator.countActiveAgents(selectedAgents, timeSlot);
+            
+            document.getElementById('agentStatus').innerHTML = agentStatusHtml;
+            
+            document.getElementById('countDetails').innerHTML = `
+                <p><strong>Total agents sélectionnés:</strong> ${totalSelected}</p>
+                <p><strong>Agents actifs (comptage manuel):</strong> ${activeCount}</p>
+                <p><strong>Agents actifs (fonction countActiveAgents):</strong> ${calculatedCount}</p>
+                <p><strong>Cohérence:</strong> ${activeCount === calculatedCount ? '✓ OK' : '✗ PROBLÈME'}</p>
+                
+                <h4>Détail par type d'agent:</h4>
+                <div id="agentsByType"></div>
+            `;
+            
+            // Analyser par type
+            const agentsByType = { Je: 0, M: 0, J: 0, SN: 0 };
+            const activeByType = { Je: 0, M: 0, J: 0, SN: 0 };
+            
+            for (const [index, agent] of Object.entries(selectedAgents)) {
+                let type = 'SN'; // par défaut
+                if (agent.vacation.startsWith('Je')) type = 'Je';
+                else if (agent.vacation.startsWith('M')) type = 'M';
+                else if (agent.vacation.startsWith('J')) type = 'J';
+                
+                agentsByType[type]++;
+                if (agent[timeSlot] === '1') {
+                    activeByType[type]++;
+                }
+            }
+            
+            let typeHtml = '';
+            for (const type of ['Je', 'M', 'J', 'SN']) {
+                typeHtml += `<p><strong>${type}:</strong> ${activeByType[type]}/${agentsByType[type]} actifs</p>`;
+            }
+            
+            document.getElementById('agentsByType').innerHTML = typeHtml;
+        }
+        
+        // Lancer le debug
+        debugAgents05h();
+    </script>
+</body>
+</html>

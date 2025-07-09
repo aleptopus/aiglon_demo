@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Calcul Capacité</title>
+</head>
+<body>
+    <h1>Debug du Calcul de Capacité</h1>
+    <div id="results"></div>
+
+    <script src="staffingMap.js"></script>
+    <script src="sivRules.js"></script>
+    <script src="vacationGrids.js"></script>
+    <script src="CapacityCalculator.js"></script>
+    
+    <script>
+        console.log('=== DEBUG CALCUL CAPACITÉ ===');
+        
+        // Vérifier le mapping de capacité
+        console.log('StaffingMap:', staffingMap);
+        
+        // Créer le calculateur
+        const calculator = new CapacityCalculator(staffingMap, sivRules, vacationGrids);
+        
+        // Vérifier la grille SamCha
+        console.log('Grille SamCha:', vacationGrids.Sam?.Cha);
+        
+        // Test de sélection d'agents
+        const grid = vacationGrids.Sam?.Cha;
+        if (grid) {
+            const selectedAgents = calculator.selectAgentProfiles(grid);
+            console.log('Agents sélectionnés:', selectedAgents);
+            console.log('Nombre d\'agents sélectionnés:', Object.keys(selectedAgents).length);
+            
+            // Test pour quelques créneaux horaires
+            const testSlots = ['00:00:00', '06:00:00', '12:00:00', '18:00:00', '22:00:00'];
+            
+            testSlots.forEach(slot => {
+                const activeAgents = calculator.countActiveAgents(selectedAgents, slot);
+                console.log(`${slot}: ${activeAgents} agents actifs`);
+                
+                // Test SIV reduction
+                const timestamp = new Date();
+                const [hours, minutes] = slot.split(':');
+                timestamp.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                
+                const sivReduction = calculator.getSIVReduction('Cha', 'Sam', timestamp, 'VFR fort');
+                const effectiveAgents = Math.max(0, activeAgents - sivReduction);
+                const capacity = calculator.staffingLookup(effectiveAgents);
+                
+                console.log(`${slot}: ${activeAgents} agents - ${sivReduction} SIV = ${effectiveAgents} effectifs → ${capacity} capacité`);
+            });
+        }
+        
+        // Test du calcul complet
+        const result = calculator.calculateCapacityWithSpecificGrid('SamCha', null, 'VFR fort');
+        console.log('Résultat complet:', result);
+        
+        // Vérifier s'il y a des valeurs nulles
+        const nullValues = result.capacities.filter((val, index) => val === 0 || val === null || val === undefined);
+        console.log(`Valeurs nulles trouvées: ${nullValues.length}/96`);
+        
+        if (nullValues.length > 0) {
+            console.log('Indices avec valeurs nulles:');
+            result.capacities.forEach((val, index) => {
+                if (val === 0 || val === null || val === undefined) {
+                    const hours = Math.floor(index * 15 / 60);
+                    const minutes = (index * 15) % 60;
+                    console.log(`Index ${index} (${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}): ${val}`);
+                }
+            });
+        }
+        
+        // Afficher les résultats dans la page
+        document.getElementById('results').innerHTML = `
+            <h2>Résultats du Debug</h2>
+            <p><strong>Agents sélectionnés:</strong> ${Object.keys(calculator.selectAgentProfiles(grid) || {}).length}</p>
+            <p><strong>Valeurs nulles:</strong> ${nullValues.length}/96</p>
+            <p><strong>Capacité min:</strong> ${Math.min(...result.capacities)}</p>
+            <p><strong>Capacité max:</strong> ${Math.max(...result.capacities)}</p>
+            <p>Voir la console pour plus de détails</p>
+        `;
+    </script>
+</body>
+</html>

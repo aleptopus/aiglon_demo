@@ -28,11 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
         summaryTableHead: document.querySelector('#summaryTable thead'),
         summaryTableBody: document.querySelector('#summaryTable tbody'),
         capacityControlsCard: document.getElementById('capacityControlsCard'),
-        staffMatin: document.getElementById('staffMatin'),
-        staffJour: document.getElementById('staffJour'),
-        staffNuit: document.getElementById('staffNuit'),
-        sivSlider: document.getElementById('sivSlider'),
-        sivValue: document.getElementById('sivValue'),
         periodSelect: document.getElementById('periodSelect'), // New: Period select
         sivSelect: document.getElementById('sivSelect'),       // New: SIV select
     };
@@ -52,6 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
         isStacked: true,
         trafficChart: null,
         windowDurationMs: 0,
+        selectedGrid: null, // Currently selected vacation grid
+        customAgentSelection: { Je: [], M: [], J: [], SN: [] }, // Custom agent selection
+        availableAgents: { Je: [], M: [], J: [], SN: [] }, // Available agents for current grid
     };
 
     console.log('state.grilleVacations after init:', state.grilleVacations);
@@ -75,7 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // elements.compoFile.addEventListener('change', handleCompoFile); // No longer needed
         elements.toggleChartBtn.addEventListener('click', toggleChartStacking);
         [elements.dateStartInput, elements.dateEndInput].forEach(el => el.addEventListener('change', updateFromDateInputs));
-        [elements.staffMatin, elements.staffJour, elements.staffNuit, elements.sivSlider].forEach(el => el.addEventListener('input', () => updateDashboard(false)));
+        elements.sivSelect.addEventListener('change', () => updateDashboard(false));
+        elements.periodSelect.addEventListener('change', handleGridSelection);
 
         console.log('Chart Canvas Context:', elements.chartCanvas);
         console.log('Chart Canvas Width:', elements.chartCanvas.canvas.width);
@@ -340,15 +339,25 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         });
 
-        // La capacité est maintenant toujours affichée si hasCapacityData est vrai
-        if (Object.keys(state.grilleVacations).length > 0 && Object.keys(state.compoEquipe).length > 0) {
+        // Afficher la capacité si les données sont disponibles
+        if (showCapacity && Object.keys(state.grilleVacations).length > 0 && Object.keys(state.compoEquipe).length > 0) {
+            // Si aucune grille n'est sélectionnée, utiliser une grille par défaut
+            let gridToUse = state.selectedGrid;
+            let customSelection = state.customAgentSelection;
+            
+            if (!gridToUse) {
+                // Sélection automatique d'une grille par défaut (Semaine Chargée)
+                gridToUse = 'SemCha';
+                customSelection = null; // Utiliser la sélection automatique
+            }
+            
             const sivHypothesis = elements.sivSelect.value; // ex: "VFR fort"
             
-            // --- CORRECTION CLÉ ---
-            // Appeler la fonction avec uniquement les arguments nécessaires
-            const capacityResult = capacityCalculator.calculateDailyCapacity(
-                state.currentStartDate, // La date à analyser
-                sivHypothesis           // L'hypothèse SIV sélectionnée
+            // Utiliser la nouvelle méthode avec grille spécifique et sélection d'agents
+            const capacityResult = capacityCalculator.calculateCapacityWithSpecificGrid(
+                gridToUse,                    // Grille sélectionnée ou par défaut
+                customSelection,              // Sélection d'agents personnalisée ou automatique
+                sivHypothesis                 // Hypothèse SIV
             );
 
             const capacityData = capacityResult.capacities;
@@ -362,6 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: 'line',
                 fill: true,
                 pointRadius: 0,
+                stepped: true,  // Courbe en escalier
                 order: -1
             });
         }
@@ -462,5 +472,125 @@ document.addEventListener('DOMContentLoaded', () => {
             rowHtml += `</tr>`;
             elements.summaryTableBody.insertAdjacentHTML('beforeend', rowHtml);
         });
+    }
+
+    // --- Grid Selection and Agent Management ---
+    function handleGridSelection() {
+        const selectedGridKey = elements.periodSelect.value;
+        console.log('Grid selected:', selectedGridKey);
+        
+        if (!selectedGridKey) {
+            state.selectedGrid = null;
+            state.availableAgents = { Je: [], M: [], J: [], SN: [] };
+            clearAgentButtons();
+            updateDashboard(false);
+            return;
+        }
+        
+        state.selectedGrid = selectedGridKey;
+        
+        // Parse grid key to get the actual grid data
+        const dayType = selectedGridKey.substring(0, 3); // "Sem", "Sam", "Dim"
+        const periodCode = selectedGridKey.substring(3); // "Cha", "Cre", "Hiv"
+        const gridData = state.grilleVacations[dayType]?.[periodCode];
+        
+        if (gridData && gridData.grid) {
+            state.availableAgents = capacityCalculator.getAgentsByType(gridData);
+            generateAgentButtons();
+            initializeDefaultSelection();
+        }
+        
+        updateDashboard(false);
+    }
+    
+    function generateAgentButtons() {
+        const buttonContainers = {
+            Je: document.getElementById('vacationTogglesJe'),
+            M: document.getElementById('vacationTogglesM'),
+            J: document.getElementById('vacationTogglesJ'),
+            SN: document.getElementById('vacationTogglesSN')
+        };
+        
+        // Clear existing buttons
+        Object.values(buttonContainers).forEach(container => {
+            if (container) container.innerHTML = '';
+        });
+        
+        // Generate buttons for each agent type
+        Object.keys(state.availableAgents).forEach(type => {
+            const container = buttonContainers[type];
+            if (!container) return;
+            
+            const agents = state.availableAgents[type];
+            const maxAgents = type === 'Je' ? 3 : 8;
+            
+            agents.slice(0, maxAgents).forEach((agent, index) => {
+                const button = document.createElement('button');
+                button.className = 'agent-button';
+                button.textContent = agent.vacation;
+                button.dataset.agentType = type;
+                button.dataset.agentId = agent.vacation;
+                button.addEventListener('click', () => toggleAgentSelection(type, agent.vacation, button));
+                container.appendChild(button);
+            });
+        });
+    }
+    
+    function initializeDefaultSelection() {
+        // Initialize with default selection (3 Je + 8 M + 8 J + 8 SN)
+        state.customAgentSelection = { Je: [], M: [], J: [], SN: [] };
+        
+        Object.keys(state.availableAgents).forEach(type => {
+            const maxAgents = type === 'Je' ? 3 : 8;
+            const agents = state.availableAgents[type].slice(0, maxAgents);
+            state.customAgentSelection[type] = agents.map(agent => agent.vacation);
+        });
+        
+        updateAgentButtonStates();
+    }
+    
+    function toggleAgentSelection(type, agentId, buttonElement) {
+        const currentSelection = state.customAgentSelection[type];
+        const index = currentSelection.indexOf(agentId);
+        
+        if (index > -1) {
+            // Remove from selection
+            currentSelection.splice(index, 1);
+            buttonElement.classList.remove('selected');
+        } else {
+            // Add to selection
+            currentSelection.push(agentId);
+            buttonElement.classList.add('selected');
+        }
+        
+        updateDashboard(false);
+    }
+    
+    function updateAgentButtonStates() {
+        document.querySelectorAll('.agent-button').forEach(button => {
+            const type = button.dataset.agentType;
+            const agentId = button.dataset.agentId;
+            
+            if (state.customAgentSelection[type] && state.customAgentSelection[type].includes(agentId)) {
+                button.classList.add('selected');
+            } else {
+                button.classList.remove('selected');
+            }
+        });
+    }
+    
+    function clearAgentButtons() {
+        const buttonContainers = [
+            document.getElementById('vacationTogglesJe'),
+            document.getElementById('vacationTogglesM'),
+            document.getElementById('vacationTogglesJ'),
+            document.getElementById('vacationTogglesSN')
+        ];
+        
+        buttonContainers.forEach(container => {
+            if (container) container.innerHTML = '';
+        });
+        
+        state.customAgentSelection = { Je: [], M: [], J: [], SN: [] };
     }
 });

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Final - Capacité avec Courbe en Escalier</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #2a2d3a; color: white; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .chart-container { width: 100%; height: 400px; margin: 20px 0; background: white; border-radius: 8px; padding: 20px; }
+        .info { background: #3a3d4a; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .grid-selector { margin: 20px 0; }
+        select { padding: 8px; border-radius: 4px; background: #4a4d5a; color: white; border: 1px solid #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Final - Capacité avec Courbe en Escalier</h1>
+        
+        <div class="info">
+            <h3>Configuration de Test</h3>
+            <p><strong>Effectif nominal:</strong> 3 Je + 8 M + 8 J + 8 SN</p>
+            <p><strong>Grille:</strong> <span id="currentGrid">SemCha (Semaine Chargée)</span></p>
+            <p><strong>Hypothèse SIV:</strong> VFR fort</p>
+        </div>
+
+        <div class="grid-selector">
+            <label for="gridSelect">Changer de grille: </label>
+            <select id="gridSelect">
+                <option value="SemCha">Semaine Chargée</option>
+                <option value="SemCre">Semaine Creuse</option>
+                <option value="SemHiv">Semaine Hiver</option>
+                <option value="SamCha">Samedi Chargé</option>
+                <option value="SamCre">Samedi Creuse</option>
+                <option value="SamHiv">Samedi Hiver</option>
+                <option value="DimCha">Dimanche Chargé</option>
+                <option value="DimCre">Dimanche Creuse</option>
+                <option value="DimHiv">Dimanche Hiver</option>
+            </select>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="capacityChart"></canvas>
+        </div>
+
+        <div class="info">
+            <h3>Statistiques</h3>
+            <p><strong>Capacité minimale:</strong> <span id="minCapacity">-</span></p>
+            <p><strong>Capacité maximale:</strong> <span id="maxCapacity">-</span></p>
+            <p><strong>Capacité moyenne:</strong> <span id="avgCapacity">-</span></p>
+            <p><strong>Valeurs nulles:</strong> <span id="nullCount">-</span></p>
+        </div>
+    </div>
+
+    <script src="staffingMap.js"></script>
+    <script src="sivRules.js"></script>
+    <script src="vacationGrids.js"></script>
+    <script src="CapacityCalculator.js"></script>
+    
+    <script>
+        let chart = null;
+        const calculator = new CapacityCalculator(staffingMap, sivRules, vacationGrids);
+        
+        function updateChart(gridKey) {
+            console.log(`Calcul pour la grille: ${gridKey}`);
+            
+            // Calculer la capacité
+            const result = calculator.calculateCapacityWithSpecificGrid(gridKey, null, 'VFR fort');
+            const capacities = result.capacities;
+            
+            console.log('Capacités calculées:', capacities);
+            
+            // Créer les labels (créneaux de 15 minutes)
+            const labels = [];
+            for (let i = 0; i < 96; i++) {
+                const hours = Math.floor(i * 15 / 60);
+                const minutes = (i * 15) % 60;
+                labels.push(`${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}`);
+            }
+            
+            // Détruire le graphique existant
+            if (chart) {
+                chart.destroy();
+            }
+            
+            // Créer le nouveau graphique
+            const ctx = document.getElementById('capacityChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Capacité',
+                        data: capacities,
+                        backgroundColor: 'rgba(255, 158, 100, 0.2)',
+                        borderColor: 'rgba(255, 158, 100, 0.8)',
+                        borderWidth: 2,
+                        fill: true,
+                        pointRadius: 0,
+                        stepped: true,  // Courbe en escalier
+                        tension: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Capacité horaire - ${getGridName(gridKey)}`,
+                            color: '#333'
+                        },
+                        legend: {
+                            labels: { color: '#333' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Heure',
+                                color: '#333'
+                            },
+                            ticks: {
+                                color: '#333',
+                                maxTicksLimit: 24,
+                                callback: function(value, index) {
+                                    // Afficher seulement les heures pleines
+                                    if (index % 4 === 0) {
+                                        return labels[index];
+                                    }
+                                    return '';
+                                }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.1)' }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Capacité (mouvements/heure)',
+                                color: '#333'
+                            },
+                            ticks: { color: '#333' },
+                            grid: { color: 'rgba(0,0,0,0.1)' },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // Mettre à jour les statistiques
+            updateStats(capacities);
+            document.getElementById('currentGrid').textContent = getGridName(gridKey);
+        }
+        
+        function updateStats(capacities) {
+            const min = Math.min(...capacities);
+            const max = Math.max(...capacities);
+            const avg = capacities.reduce((a, b) => a + b, 0) / capacities.length;
+            const nullCount = capacities.filter(c => c === 0 || c === null || c === undefined).length;
+            
+            document.getElementById('minCapacity').textContent = min.toFixed(1);
+            document.getElementById('maxCapacity').textContent = max.toFixed(1);
+            document.getElementById('avgCapacity').textContent = avg.toFixed(1);
+            document.getElementById('nullCount').textContent = `${nullCount}/96`;
+        }
+        
+        function getGridName(gridKey) {
+            const names = {
+                'SemCha': 'Semaine Chargée',
+                'SemCre': 'Semaine Creuse', 
+                'SemHiv': 'Semaine Hiver',
+                'SamCha': 'Samedi Chargé',
+                'SamCre': 'Samedi Creuse',
+                'SamHiv': 'Samedi Hiver',
+                'DimCha': 'Dimanche Chargé',
+                'DimCre': 'Dimanche Creuse',
+                'DimHiv': 'Dimanche Hiver'
+            };
+            return names[gridKey] || gridKey;
+        }
+        
+        // Event listener pour le changement de grille
+        document.getElementById('gridSelect').addEventListener('change', function() {
+            updateChart(this.value);
+        });
+        
+        // Initialiser avec SemCha
+        updateChart('SemCha');
+    </script>
+</body>
+</html>

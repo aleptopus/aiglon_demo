@@ -55,11 +55,18 @@
                     </div>
                     <div class="toggles-container">
                         <div class="filter-group-vertical">
-                            <label for="periodSelect">Période</label>
+                            <label for="periodSelect">Grille de vacation</label>
                             <select id="periodSelect" class="select-dropdown">
-                                <option value="Hiv">Hiver</option>
-                                <option value="Cha" selected>Chargée</option>
-                                <option value="Cre">Creuse</option>
+                                <option value="">Sélectionner une grille...</option>
+                                <option value="SemCha">Semaine Chargée</option>
+                                <option value="SamCha">Samedi Chargé</option>
+                                <option value="DimCha">Dimanche Chargé</option>
+                                <option value="SemCre">Semaine Creuse</option>
+                                <option value="SamCre">Samedi Creux</option>
+                                <option value="DimCre">Dimanche Creux</option>
+                                <option value="SemHiv">Semaine Hiver</option>
+                                <option value="SamHiv">Samedi Hiver</option>
+                                <option value="DimHiv">Dimanche Hiver</option>
                             </select>
                         </div>
                         <div class="filter-group-vertical">
@@ -126,7 +133,7 @@
 
                     <div id="capacityControlsCard" class="card hidden">
                         <h2 class="card-title">Contrôles de Capacité</h2>
-                        <div class="capacity-controls-grid">
+                        <div class="capacity-controls-simplified">
                             <div class="control-group">
                                 <label>Effectif par vacation</label>
                                 <div class="vacation-controls">
@@ -147,22 +154,6 @@
                                         <div id="vacationTogglesSN" class="toggle-group"></div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="control-group">
-                                <label for="staffMatin">Staff Matin (06h-14h):</label>
-                                <input type="number" id="staffMatin" value="3" min="0" max="10">
-                            </div>
-                            <div class="control-group">
-                                <label for="staffJour">Staff Jour (14h-22h):</label>
-                                <input type="number" id="staffJour" value="8" min="0" max="10">
-                            </div>
-                            <div class="control-group">
-                                <label for="staffNuit">Staff Nuit (22h-06h):</label>
-                                <input type="number" id="staffNuit" value="8" min="0" max="10">
-                            </div>
-                            <div class="control-group">
-                                <label for="sivSlider">Réduction SIV: <span id="sivValue">0</span>%</label>
-                                <input type="range" id="sivSlider" min="0" max="100" value="0">
                             </div>
                             <div class="control-group">
                                 <label for="sivSelect">Hypothèse SIV</label>

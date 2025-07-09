@@ -26,21 +26,38 @@ class CapacityCalculator {
     const maxCapacityInMap = mapping[maxAgentsInMap] || 0;
 
     this.staffingLookup = (agentsCount) => {
-      const agentsRounded = Math.max(0, Math.round(agentsCount));
-      if (mapping.hasOwnProperty(agentsRounded)) {
-        return mapping[agentsRounded];
-      } else if (agentsRounded > maxAgentsInMap && keys.length > 0) {
-        return maxCapacityInMap;
-      } else if (agentsRounded < Math.min(...keys) && keys.length > 0) {
-        return mapping[keys[0]]; // Smallest key, typically 0 or 1
-      } else {
-        // Find the largest key less than or equal to agentsRounded
-        let lowerKeys = keys.filter(k => k <= agentsRounded);
-        if (lowerKeys.length > 0) {
-          return mapping[Math.max(...lowerKeys)];
-        }
-        return 0; // Default if no mapping found
+      // Support for decimal values with linear interpolation
+      const agentsFloat = Math.max(0, parseFloat(agentsCount));
+      
+      // If exact match exists
+      if (mapping.hasOwnProperty(Math.floor(agentsFloat)) && agentsFloat === Math.floor(agentsFloat)) {
+        return mapping[agentsFloat];
       }
+      
+      // Handle edge cases
+      if (agentsFloat > maxAgentsInMap && keys.length > 0) {
+        return maxCapacityInMap;
+      } else if (agentsFloat < Math.min(...keys) && keys.length > 0) {
+        return mapping[keys[0]];
+      }
+      
+      // Linear interpolation for decimal values
+      const lowerKey = Math.floor(agentsFloat);
+      const upperKey = Math.ceil(agentsFloat);
+      
+      if (mapping.hasOwnProperty(lowerKey) && mapping.hasOwnProperty(upperKey)) {
+        const lowerCapacity = mapping[lowerKey];
+        const upperCapacity = mapping[upperKey];
+        const fraction = agentsFloat - lowerKey;
+        return parseFloat((lowerCapacity + (upperCapacity - lowerCapacity) * fraction).toFixed(2));
+      }
+      
+      // Fallback: find closest available mapping
+      let lowerKeys = keys.filter(k => k <= agentsFloat);
+      if (lowerKeys.length > 0) {
+        return mapping[Math.max(...lowerKeys)];
+      }
+      return 0;
     };
   }
 
@@ -76,56 +93,113 @@ class CapacityCalculator {
     return { periodCode: period, dayType };
   }
 
-  selectAgentProfiles(gridData) {
+  getAgentsByType(gridData) {
+    if (!gridData || !gridData.grid || gridData.grid.length === 0) {
+      console.warn('getAgentsByType - Grille de vacation invalide ou vide.');
+      return { Je: [], M: [], J: [], SN: [] };
+    }
+
+    const agents = { Je: [], M: [], J: [], SN: [] };
+    
+    gridData.grid.forEach(profile => {
+      const vacationName = (profile.vacation || "").trim();
+      
+      if (vacationName.startsWith('Je')) {
+        agents.Je.push(profile);
+      } else if (vacationName.startsWith('M') || vacationName === 'MC') {
+        agents.M.push(profile);
+      } else if (vacationName.startsWith('J') || vacationName === 'JC') {
+        agents.J.push(profile);
+      } else if (vacationName.startsWith('N') || vacationName.startsWith('S') || vacationName === 'NC') {
+        agents.SN.push(profile);
+      }
+    });
+
+    return agents;
+  }
+
+  selectAgentProfiles(gridData, customSelection = null) {
     if (!gridData || !gridData.grid || gridData.grid.length === 0) {
       console.warn('selectAgentProfiles - Grille de vacation invalide ou vide.');
       return {};
     }
     
-    // --- CORRECTION CLÉ ---
-    // Utiliser "vacation" et "priorite" en minuscules, car les en-têtes sont maintenant normalisés.
-    const nonChefProfiles = gridData.grid
-      .filter(profile => {
-        const vacationName = (profile.vacation || "").toUpperCase().trim();
-        return !['JC', 'MC', 'NC'].includes(vacationName);
-      })
-      .sort((a, b) => a.priorite - b.priorite); // Tri simple car 'priorite' est maintenant un nombre fiable.
+    if (customSelection) {
+      // Utiliser la sélection personnalisée fournie par l'interface
+      const agentProfiles = {};
+      let index = 0;
+      
+      ['Je', 'M', 'J', 'SN'].forEach(type => {
+        if (customSelection[type]) {
+          customSelection[type].forEach(agentId => {
+            const profile = gridData.grid.find(p => p.vacation === agentId);
+            if (profile) {
+              agentProfiles[index] = profile;
+              index++;
+            }
+          });
+        }
+      });
+      
+      console.log(`✓ Sélection personnalisée: ${Object.keys(agentProfiles).length} agents mappés.`);
+      return agentProfiles;
+    }
     
-    // Sélectionner les 7 premiers profils après filtrage et tri
-    const selectedProfiles = nonChefProfiles.slice(0, 7);
-    
+    // Sélection automatique par défaut: 3 Je + 8 M + 8 J + 7 SN (par ordre de priorité)
+    const agentsByType = this.getAgentsByType(gridData);
     const agentProfiles = {};
-    selectedProfiles.forEach((profile, i) => {
-      agentProfiles[i] = profile;
+    let index = 0;
+    
+    // 3 Je (tous les Je disponibles)
+    agentsByType.Je.slice(0, 3).forEach(profile => {
+      agentProfiles[index] = profile;
+      index++;
     });
     
-    console.log(`✓ Simulé ${Object.keys(agentProfiles).length} agents (7 premiers non-chefs) mappés.`);
+    // 8 M (en comptant MC en premier par priorité)
+    agentsByType.M.slice(0, 8).forEach(profile => {
+      agentProfiles[index] = profile;
+      index++;
+    });
+    
+    // 8 J (en comptant JC en premier par priorité)
+    agentsByType.J.slice(0, 8).forEach(profile => {
+      agentProfiles[index] = profile;
+      index++;
+    });
+    
+    // 8 SN (en comptant NC en premier par priorité)
+    agentsByType.SN.slice(0, 8).forEach(profile => {
+      agentProfiles[index] = profile;
+      index++;
+    });
+    
+    console.log(`✓ Sélection automatique: ${Object.keys(agentProfiles).length} agents mappés (3 Je + 8 M + 8 J + 8 SN).`);
     return agentProfiles;
   }
 
   countActiveAgents(selectedAgentProfiles, hourMinuteStr) {
     let agentsAtThisSlot = 0;
-    console.log(`countActiveAgents - Checking slot ${hourMinuteStr}`);
-    console.log(`countActiveAgents - selectedAgentProfiles:`, selectedAgentProfiles);
     
     for (const agentId in selectedAgentProfiles) {
       const profile = selectedAgentProfiles[agentId];
-      console.log(`countActiveAgents - Agent ${agentId} profile:`, profile);
-      console.log(`countActiveAgents - Agent ${agentId} value at ${hourMinuteStr}:`, profile[hourMinuteStr]);
       
-      // Check if the agent is active ('1') at this specific time slot
-      if (profile[hourMinuteStr] === '1') {
+      // Only count agents with '1' (active), not 'C' (chef/manager)
+      const value = profile[hourMinuteStr];
+      if (value === '1') {
         agentsAtThisSlot++;
-        console.log(`countActiveAgents - Agent ${agentId} is ACTIVE at ${hourMinuteStr}`);
       }
     }
-    console.log(`countActiveAgents - Total agents at ${hourMinuteStr}: ${agentsAtThisSlot}`);
     return agentsAtThisSlot;
   }
 
   getSIVReduction(periodCode, dayType, timestamp, sivHypothesis) {
     const sivPeriod = this.sivPeriodMapping[periodCode];
-    const hourMinute = `${String(timestamp.getHours()).padStart(2, '0')}h${String(timestamp.getMinutes()).padStart(2, '0')}`;
+    
+    // Use local time for SIV rules lookup (rules are in UTC but we display in local time)
+    const localHours = timestamp.getHours();
+    const localMinutes = timestamp.getMinutes();
+    const hourMinute = `${String(localHours).padStart(2, '0')}h${String(localMinutes).padStart(2, '0')}`;
 
     const rule = this.sivRules[dayType]?.[sivPeriod]?.[sivHypothesis]?.[hourMinute];
     return rule !== undefined ? rule : 0;
@@ -207,12 +281,78 @@ class CapacityCalculator {
       effectiveAgentsRawValues.push(effectiveAgents); // Store raw effective agents
     }
 
-    // Apply rolling average as per Python script
-    const finalCapacities = this.applyHourlyAverage(capacities);
-    
+    // Return raw capacities without rolling average to create step-like curve
     return {
-      capacities: finalCapacities,
+      capacities: capacities,
       effectiveAgents: effectiveAgentsRawValues // Return the stored raw effective agents
+    };
+  }
+
+  calculateCapacityWithSpecificGrid(gridKey, customSelection = null, sivHypothesis = 'VFR fort') {
+    // Parse gridKey (e.g., "SemCha" -> dayType="Sem", periodCode="Cha")
+    const dayType = gridKey.substring(0, 3); // "Sem", "Sam", "Dim"
+    const periodCode = gridKey.substring(3); // "Cha", "Cre", "Hiv"
+    
+    console.log(`Calculating capacity for grid: ${gridKey}, dayType: ${dayType}, periodCode: ${periodCode}`);
+    
+    const grid = this.vacationGrids[dayType]?.[periodCode];
+    if (!grid || !grid.grid || grid.grid.length === 0) {
+      console.warn(`No vacation grid found for ${gridKey}. Returning zero capacity.`);
+      return { capacities: Array(96).fill(0), effectiveAgents: Array(96).fill(0) };
+    }
+
+    const selectedAgentProfiles = this.selectAgentProfiles(grid, customSelection);
+    console.log('Selected Agent Profiles:', selectedAgentProfiles);
+    if (Object.keys(selectedAgentProfiles).length === 0) {
+      console.warn(`No agent profiles selected for ${gridKey}. Returning zero capacity.`);
+      return { capacities: Array(96).fill(0), effectiveAgents: Array(96).fill(0) };
+    }
+
+    // First pass: calculate effective agents for each 15-minute slot
+    const effectiveAgentsBy15Min = [];
+    
+    for (let i = 0; i < 96; i++) {
+      const currentTimestamp = new Date();
+      currentTimestamp.setHours(0, 0, 0, 0);
+      currentTimestamp.setMinutes(i * 15);
+      currentTimestamp.setSeconds(0);
+
+      const hourMinuteStr = `${String(currentTimestamp.getHours()).padStart(2, '0')}:${String(currentTimestamp.getMinutes()).padStart(2, '0')}:00`;
+      
+      const agentsAtThisSlot = this.countActiveAgents(selectedAgentProfiles, hourMinuteStr);
+      const sivReduction = this.getSIVReduction(periodCode, dayType, currentTimestamp, sivHypothesis);
+      const effectiveAgents = Math.max(0, agentsAtThisSlot - sivReduction);
+      
+      effectiveAgentsBy15Min.push(effectiveAgents);
+    }
+
+    // Second pass: calculate hourly averages and capacities
+    const capacities = [];
+    const effectiveAgentsHourlyAvg = [];
+    
+    for (let i = 0; i < 96; i++) {
+      // Calculate average over 4 consecutive 15-min periods (1 hour)
+      let sum = 0;
+      let count = 0;
+      
+      for (let j = 0; j < 4; j++) {
+        if (i + j < 96) {
+          sum += effectiveAgentsBy15Min[i + j];
+          count++;
+        }
+      }
+      
+      const hourlyAvgAgents = count > 0 ? parseFloat((sum / count).toFixed(2)) : 0;
+      effectiveAgentsHourlyAvg.push(hourlyAvgAgents);
+      
+      // Apply capacity mapping with interpolation
+      const capacity = this.staffingLookup(hourlyAvgAgents);
+      capacities.push(capacity);
+    }
+
+    return {
+      capacities: capacities,
+      effectiveAgents: effectiveAgentsHourlyAvg
     };
   }
 }

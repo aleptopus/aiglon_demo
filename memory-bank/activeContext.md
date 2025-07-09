@@ -10,14 +10,17 @@ Le projet Aiglon est maintenant fonctionnel avec des courbes de capacité qui s'
   - Parsing CSV corrigé pour une sélection d'agents fonctionnelle
 
 - **CapacityCalculator.js**:
-  - Sélection des 7 premiers agents non-chefs maintenant opérationnelle
-  - Calculs de capacité générant des valeurs non nulles
-  - Logs de débogage pour traçabilité
+  - **CORRECTION CRITIQUE** : Seuls les agents avec '1' comptent (pas les chefs 'C')
+  - **CORRECTION UTC** : Les règles SIV sont maintenant appliquées en UTC
+  - Sélection des agents maintenant opérationnelle (3 Je + 8 M + 8 J + 8 SN)
+  - Interface de sélection d'agents avec boutons interactifs
+  - Calculs de capacité générant des valeurs correctes
 
 - **script.js**:
   - Intégration complète de la classe `CapacityCalculator`
+  - Interface de sélection d'agents par type (Je, M, J, SN)
   - Affichage des courbes de capacité en orange
-  - Interface utilisateur fonctionnelle
+  - Gestion des grilles de vacation par période
 
 ## Next Steps
 1. **Validation métier** : 
