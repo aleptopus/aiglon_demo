@@ -213,8 +213,8 @@ class CapacityCalculator {
         }
       }
 
-      // Use this.periodCodeForGrid for SIV reduction, as it reflects the user's period choice
-      const sivReduction = this.getSIVReduction(this.periodCodeForGrid, dayType, currentTimestamp, sivHypothesis);
+      // Use this.periodCodeForGrid and dayTypeToUse for SIV reduction
+      const sivReduction = this.getSIVReduction(this.periodCodeForGrid, dayTypeToUse, currentTimestamp, sivHypothesis);
       const effectiveAgents = Math.max(0, agentsAtThisSlot - sivReduction);
       effectiveAgentsOverTime.push(effectiveAgents); // Store it
       
