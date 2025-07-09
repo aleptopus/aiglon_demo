@@ -1,20 +1,24 @@
 # Active Context for Aiglon Futé Dashboard
 
 ## Current Work Focus
-Le focus actuel est sur l'amélioration de l'interface utilisateur pour la sélection des filtres de période et d'hypothèse SIV, ainsi que sur l'affichage correct de la capacité sur le graphique, quelle que soit la plage de dates sélectionnée.
+Le focus actuel est sur la correction du calcul de la capacité, en particulier la sélection des profils d'agents dans `CapacityCalculator.js`, et l'affichage correct de la capacité sur le graphique.
 
 ## Recent Changes
 - **script.js**:
-  - Rétablissement de la logique de parsing des fichiers COHOR et TMA à partir de `script - old.txt` pour résoudre les problèmes de `NaN` et d'affichage du graphique.
-  - Initialisation de `state.grilleVacations` avec `vacationGrids` et `state.compoEquipe` avec `staffingMap` pour un chargement automatique des données de capacité.
-  - Suppression de la condition `isSingleDay` pour l'affichage de la capacité.
-- **index.html**:
-  - Ajout des éléments DOM nécessaires (`staffMatin`, `staffJour`, `staffNuit`, `sivSlider`, `sivValue`) pour les contrôles de capacité.
-  - Suppression des boutons d'importation pour les fichiers de grille et de composition d'équipe, car ces données sont maintenant chargées globalement.
-  - Remplacement des boutons de sélection de période et d'hypothèse SIV par des menus déroulants (`select`).
+  - Correction des erreurs de syntaxe (`missing ) after argument list`).
+  - Correction de l'erreur `isSingleDay is not defined`.
+  - Intégration de la classe `CapacityCalculator`.
+  - Ajout de logs pour le débogage du graphique et du calcul de capacité.
+  - La courbe de capacité est maintenant affichée en orange.
+- **vacationGrids.js**:
+  - Modification du format de stockage des grilles de vacances pour inclure une propriété `grid` compatible avec `CapacityCalculator.js`.
+- **CapacityCalculator.js**:
+  - Ajout de la fonction `countActiveAgents`.
+  - Ajout de logs détaillés pour le débogage du calcul de capacité.
 
 ## Next Steps
-- Adapter `script.js` pour gérer les nouveaux menus déroulants (`select`) pour la période et l'hypothèse SIV.
-- Vérifier l'affichage de la capacité sur le graphique avec différentes plages de dates et sélections de période/SIV.
-- Effectuer des tests de cohérence entre les différents modules de données.
-- Mettre à jour les autres fichiers de la memory bank si nécessaire.
+- **Diagnostiquer et corriger `selectAgentProfiles`**: Comprendre pourquoi la fonction ne sélectionne aucun profil d'agent et la corriger.
+- **Vérifier le calcul de capacité**: S'assurer que `countActiveAgents()`, `getSIVReduction()`, et `applyHourlyAverage()` fonctionnent correctement et produisent des valeurs de capacité non nulles.
+- **Implémentation des menus déroulants**: Adapter `script.js` pour gérer les nouveaux menus déroulants (`select`) pour la sélection de la période et de l'hypothèse SIV.
+- **Tests**: Effectuer des tests de cohérence entre les différents modules de données et les calculs.
+- **Améliorations UI/UX**: Mettre en œuvre les corrections mineures restantes.

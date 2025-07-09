@@ -341,7 +341,10 @@ for (const key in csvData) {
 
     // Assign the parsed data to the correct location in vacationGrids
     if (vacationGrids[dayKey] && vacationGrids[dayKey][seasonKey]) {
-      vacationGrids[dayKey][seasonKey] = parseCsv(csvData[key]);
+      vacationGrids[dayKey][seasonKey] = {
+        name: key, // e.g., "DimCha"
+        grid: parseCsv(csvData[key])
+      };
     } else {
       console.error(`Invalid structure for day: ${dayKey}, season: ${seasonKey}. Please check vacationGrids object.`);
     }

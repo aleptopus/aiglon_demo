@@ -37,6 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
         sivSelect: document.getElementById('sivSelect'),       // New: SIV select
     };
 
+    console.log('vacationGrids at init:', vacationGrids);
+    console.log('staffingMap at init:', staffingMap);
+
     let state = {
         cohorData: [],
         tmaMap: new Map(),
@@ -50,6 +53,12 @@ document.addEventListener('DOMContentLoaded', () => {
         trafficChart: null,
         windowDurationMs: 0,
     };
+
+    console.log('state.grilleVacations after init:', state.grilleVacations);
+    console.log('state.compoEquipe after init:', state.compoEquipe);
+
+    // Instantiate CapacityCalculator
+    const capacityCalculator = new CapacityCalculator(staffingMap, sivRules, vacationGrids);
     
     // --- Constants ---
     const DAYS_OF_WEEK = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
@@ -60,15 +69,29 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     // --- Event Listeners ---
-    elements.csvFile.addEventListener('change', handleCohorFile);
-    elements.jsonFile.addEventListener('change', handleTmaFile);
-    // elements.grilleFile.addEventListener('change', handleGrilleFile); // No longer needed
-    // elements.compoFile.addEventListener('change', handleCompoFile); // No longer needed
-    elements.toggleChartBtn.addEventListener('click', toggleChartStacking);
-    [elements.dateStartInput, elements.dateEndInput].forEach(el => el.addEventListener('change', updateFromDateInputs));
-    [elements.staffMatin, elements.staffJour, elements.staffNuit, elements.sivSlider].forEach(el => el.addEventListener('input', () => updateDashboard(false)));
+        elements.csvFile.addEventListener('change', handleCohorFile);
+        elements.jsonFile.addEventListener('change', handleTmaFile);
+        // elements.grilleFile.addEventListener('change', handleGrilleFile); // No longer needed
+        // elements.compoFile.addEventListener('change', handleCompoFile); // No longer needed
+        elements.toggleChartBtn.addEventListener('click', toggleChartStacking);
+        [elements.dateStartInput, elements.dateEndInput].forEach(el => el.addEventListener('change', updateFromDateInputs));
+        [elements.staffMatin, elements.staffJour, elements.staffNuit, elements.sivSlider].forEach(el => el.addEventListener('input', () => updateDashboard(false)));
 
-    //          alert("Aucune donnée prévisionnelle trouvée dans le fichier COHOR. Vérifiez le format du fichier.");
+        console.log('Chart Canvas Context:', elements.chartCanvas);
+        console.log('Chart Canvas Width:', elements.chartCanvas.canvas.width);
+        console.log('Chart Canvas Height:', elements.chartCanvas.canvas.height);
+
+    function handleCohorFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        elements.csvName.textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            state.cohorData = processCohorCSV(e.target.result);
+            if (state.cohorData.length > 0) {
+                initializeDashboard();
+            } else {
+                alert("Aucune donnée prévisionnelle trouvée dans le fichier COHOR. Vérifiez le format du fichier.");
             }
         };
         reader.readAsText(file, 'UTF-8');
@@ -87,13 +110,10 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsText(file, 'UTF-8');
     }
 
-    // Removed handleGrilleFile and handleCompoFile as data is now global
-
     function initializeDashboard() {
         elements.initialMsg.classList.add('hidden');
         elements.dashboard.classList.remove('hidden');
         elements.jsonButton.disabled = false;
-        // elements.grilleButton.disabled = false; // No longer needed
         [elements.dateStartInput, elements.dateEndInput].forEach(el => el.disabled = false);
 
         combineAllData();
@@ -195,18 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const containerWidth = elements.dateSliderContainer.clientWidth;
         if (containerWidth === 0) return; // Don't draw if not visible
         const margin = { right: 20, left: 20 };
-        const width = contuttons() {
-        elements.dayToggles.innerHTML = DAYS_OF_WEEK.map((day, i) => `<input type="checkbox" id="day-${i}" value="${i}" checked><label for="day-${i}">${day.substring(0,3)}</label>`).join('');
-        elements.trafficToggles.innerHTML = TRAFFIC_TYPES.map((type) => `<input type="checkbox" id="type-${type.key}" value="${type.key}" checked><label for="type-${type.key}">${type.label}</label>`).join('');
-        document.querySelectorAll('.toggle-group input').forEach(cb => cb.addEventListener('change', updateDashboard));
-    }
-
-    function createDateSlider() {
-        const [minDate, maxDate] = state.fallDaieRange;
-        consn certainerWidth = elementW.dateSliderContainer.clientWidth;
-        if icontainerWidth === 0d return; // Don't draw if not visible
-        const margin =th right: 20, left: 20 };
-        const width = containerWidth - margin.left - margin.right; - margin.left - margin.right;
+        const width = containerWidth - margin.left - margin.right;
         
         elements.dateSliderContainer.innerHTML = '';
         const svg = d3.select(elements.dateSliderContainer).append("svg").attr("width", containerWidth).attr("height", 50);
@@ -267,16 +276,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // const isSingleDay = state.currentStartDate.toDateString() === state.currentEndDate.toDateString(); // Removed as per user request
-        const hasCapacityData = state.grilleVacations.length > 0 && Object.keys(state.compoEquipe).length > 0;
+        console.log('state.grilleVacations before hasCapacityData check:', state.grilleVacations);
+        console.log('state.compoEquipe before hasCapacityData check:', state.compoEquipe);
+        const hasCapacityData = Object.keys(state.grilleVacations).length > 0 && Object.keys(state.compoEquipe).length > 0;
+        console.log('hasCapacityData:', hasCapacityData);
 
         if (hasCapacityData) { // Capacity should always be shown if data is available
+            console.log('Removing hidden class from capacityControlsCard');
             elements.capacityControlsCard.classList.remove('hidden');
         } else {
+            console.log('Adding hidden class to capacityControlsCard');
             elements.capacityControlsCard.classList.add('hidden');
         }
         
         updateSummaryCards(filtered);
-        updateMainChart(filtered, isSingleDay && hasCapacityData);
+        updateMainChart(filtered, hasCapacityData);
         updateSummaryTable(filtered, activeDays);
     }
     
@@ -286,43 +300,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDashboard(false);
     }
 
-    function calculateCapacity(date, staffing, sivPercentage) {
-        const dayOfWeek = DAYS_OF_WEEK[(date.getDay() + 6) % 7];
-        const dayType = ['Samedi', 'Dimanche'].includes(dayOfWeek) ? dayOfWeek.slice(0, 3) : 'Sem';
-        const period = 'Cha'; // This should be dynamic based on date, hardcoded for now
-
-        const grilleKey = `Vacs_${dayType}${period}`;
-        const grille = state.grilleVacations.find(g => g.name === grilleKey)?.grid;
-        if (!grille) return Array(96).fill(0);
-
-        const capacitySlots = Array(96).fill(0);
-        const agentProfiles = state.compoEquipe;
-
-        const staffCounts = {
-            'M': staffing.M,
-            'J': staffing.J,
-            'S': staffing.N, // Assuming N maps to S in the grid
-            'N': staffing.N
-        };
-
-        for (const vacationType in staffCounts) {
-            for (let i = 1; i <= staffCounts[vacationType]; i++) {
-                const agentKey = `${vacationType}${i}`;
-                const profileKey = agentProfiles[agentKey];
-                if (profileKey && grille[profileKey]) {
-                    grille[profileKey].forEach((val, index) => {
-                        if (val === 1) {
-                            capacitySlots[index] += 1;
-                        }
-                    });
-                }
-            }
-        }
-
-        const sivReduction = 1 - (sivPercentage / 100);
-        return capacitySlots.map(c => c * sivReduction);
-    }
-    
     function updateMainChart(data, showCapacity) { // showCapacity is now always true if hasCapacityData
         const numDays = new Set(data.map(d => d.date.toDateString())).size || 1;
         const slotData = new Map();
@@ -351,27 +328,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         const activeTraffic = [...elements.trafficToggles.querySelectorAll('input:checked')].map(cb => cb.value);
-        const datasets = TRAFFIC_TYPES.map(type => ({
-            label: type.label, data: Array.from(rollingData.values()).map(d => d[type.key]),
-            backgroundColor: type.color, hidden: !activeTraffic.includes(type.key),
-            type: 'bar',
-        }));
+        const datasets = TRAFFIC_TYPES.map(type => {
+            const data = Array.from(rollingData.values()).map(d => d[type.key]);
+            console.log(`Dataset for ${type.label}:`, data);
+            return {
+                label: type.label, data: data,
+                backgroundColor: type.color, hidden: !activeTraffic.includes(type.key),
+                type: 'bar',
+            };
+        });
 
         // Capacity is now always shown if hasCapacityData is true
-        if (state.grilleVacations.length > 0 && Object.keys(state.compoEquipe).length > 0) {
+        if (Object.keys(state.grilleVacations).length > 0 && Object.keys(state.compoEquipe).length > 0) {
             elements.sivValue.textContent = `${elements.sivSlider.value}%`;
             const staffing = {
                 M: parseInt(elements.staffMatin.value),
                 J: parseInt(elements.staffJour.value),
                 N: parseInt(elements.staffNuit.value),
             };
-            const capacityData = calculateCapacity(state.currentStartDate, staffing, elements.sivSlider.value);
+            // Use the CapacityCalculator class
+            const capacityResult = capacityCalculator.calculateDailyCapacity(state.currentStartDate, staffing, elements.sivSlider.value);
+            const capacityData = capacityResult.capacities;
+            console.log('Capacity Data:', capacityData);
             
             datasets.push({
                 label: 'Capacité',
                 data: capacityData,
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                borderColor: 'rgba(0, 0, 0, 0.5)',
+                backgroundColor: 'rgba(255, 158, 100, 0.2)', // Using accent-orange with transparency
+                borderColor: 'rgba(255, 158, 100, 0.8)', // Using accent-orange
                 type: 'line',
                 fill: true,
                 pointRadius: 0,
@@ -379,41 +363,49 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        console.log('Chart Labels (sortedSlots):', sortedSlots);
+        console.log('Final Chart Datasets:', datasets);
+
         if (state.trafficChart) state.trafficChart.destroy();
-        state.trafficChart = new Chart(elements.chartCanvas, {
-            type: 'bar',
-            data: { labels: sortedSlots, datasets },
-            options: {
-                responsive: true, maintainAspectRatio: false, animation: { duration: 500 },
-                plugins: {
-                    legend: { labels: { color: 'var(--text-primary)' } },
-                    tooltip: {
-                        enabled: true, mode: 'index',
-                        titleAlign: 'center', bodyAlign: 'center', footerAlign: 'center',
-                        callbacks: {
-                            title: function(context) {
-                                const label = context[0].label;
-                                const h = parseInt(label.split(':')[0]); const m = parseInt(label.split(':')[1]);
-                                const startDate = new Date(2000, 0, 1, h, m);
-                                const endDate = new Date(startDate.getTime() + 59 * 60 * 1000);
-                                const formatTime = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                                return `Créneau ${formatTime(startDate)} - ${formatTime(endDate)}`;
-                            },
-                            label: function(context) { return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}`; },
-                            footer: function(context) {
-                                let total = 0;
-                                context.forEach(item => { if (!item.dataset.hidden) { total += item.parsed.y; } });
-                                return `\nTotal: ${total.toFixed(1)}`;
+        
+        // Add a small delay to ensure canvas dimensions are calculated
+        setTimeout(() => {
+            state.trafficChart = new Chart(elements.chartCanvas, {
+                type: 'bar',
+                data: { labels: sortedSlots, datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 500 },
+                    plugins: {
+                        legend: { labels: { color: 'var(--text-primary)' } },
+                        tooltip: {
+                            enabled: true, mode: 'index',
+                            titleAlign: 'center', bodyAlign: 'center', footerAlign: 'center',
+                            callbacks: {
+                                title: function(context) {
+                                    const label = context[0].label;
+                                    const h = parseInt(label.split(':')[0]); const m = parseInt(label.split(':')[1]);
+                                    const startDate = new Date(2000, 0, 1, h, m);
+                                    const endDate = new Date(startDate.getTime() + 59 * 60 * 1000);
+                                    const formatTime = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                                    return `Créneau ${formatTime(startDate)} - ${formatTime(endDate)}`;
+                                },
+                                label: function(context) { return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}`; },
+                                footer: function(context) {
+                                    let total = 0;
+                                    context.forEach(item => { if (!item.dataset.hidden) { total += item.parsed.y; } });
+                                    return `\nTotal: ${total.toFixed(1)}`;
+                                }
                             }
                         }
+                    },
+                    scales: {
+                        x: { stacked: state.isStacked, ticks: { color: 'var(--text-secondary)' }, grid: { color: 'rgba(161, 170, 184, 0.2)' } },
+                        y: { stacked: state.isStacked, beginAtZero: true, ticks: { color: 'var(--text-secondary)' }, grid: { color: 'rgba(161, 170, 184, 0.2)' } }
                     }
-                },
-                scales: {
-                    x: { stacked: state.isStacked, ticks: { color: 'var(--text-secondary)' }, grid: { color: 'rgba(161, 170, 184, 0.2)' } },
-                    y: { stacked: state.isStacked, beginAtZero: true, ticks: { color: 'var(--text-secondary)' }, grid: { color: 'rgba(161, 170, 184, 0.2)' } }
                 }
-            }
-        });
+            });
+            console.log('Chart initialized with dimensions:', elements.chartCanvas.canvas.width, elements.chartCanvas.canvas.height);
+        }, 0); // Smallest possible delay
     }
 
     function updateSummaryCards(data) {

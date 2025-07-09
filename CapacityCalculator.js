@@ -76,17 +76,30 @@ class CapacityCalculator {
     return { periodCode: period, dayType };
   }
 
-  selectAgentProfiles(grid) {
-    if (!grid || grid.length === 0) return {};
+  selectAgentProfiles(gridData) {
+    console.log('selectAgentProfiles - gridData:', gridData);
+    console.log('selectAgentProfiles - gridData.grid:', gridData.grid); // Add this log
+    if (!gridData || !gridData.grid || gridData.grid.length === 0) {
+      console.warn('selectAgentProfiles - Invalid gridData or empty grid.');
+      return {};
+    }
     
     // Filtrer les vacations non-chef et trier par priorité
-    const nonChefProfiles = grid
-      .filter(profile => !['JC', 'MC', 'NC'].includes(profile.vacation))
+    const nonChefProfiles = gridData.grid
+      .filter(profile => {
+        console.log('selectAgentProfiles - Checking profile:', profile); // Log the entire profile object
+        console.log('selectAgentProfiles - Checking profile.vacation:', profile.vacation);
+        return !['JC', 'MC', 'NC'].includes(profile.vacation);
+      })
       .sort((a, b) => a.priorite - b.priorite);
     
+    console.log('selectAgentProfiles - nonChefProfiles:', nonChefProfiles);
+
     // Prendre les 7 premiers profils
     const selectedProfiles = nonChefProfiles.slice(0, 7);
     
+    console.log('selectAgentProfiles - selectedProfiles (sliced):', selectedProfiles);
+
     // Créer un mapping d'agents
     const agentProfiles = {};
     selectedProfiles.forEach((profile, i) => {
@@ -94,6 +107,18 @@ class CapacityCalculator {
     });
     
     return agentProfiles;
+  }
+
+  countActiveAgents(selectedAgentProfiles, hourMinuteStr) {
+    let agentsAtThisSlot = 0;
+    for (const agentId in selectedAgentProfiles) {
+      const profile = selectedAgentProfiles[agentId];
+      // Check if the agent is active ('1') at this specific time slot
+      if (profile[hourMinuteStr] === '1') {
+        agentsAtThisSlot++;
+      }
+    }
+    return agentsAtThisSlot;
   }
 
   getSIVReduction(periodCode, dayType, timestamp, sivHypothesis) {
@@ -136,53 +161,50 @@ class CapacityCalculator {
 
   calculateDailyCapacity(date, activeVacations, sivHypothesis = 'VFR fort') {
     const { periodCode, dayType } = this.getPeriodAndDayType(date);
+    console.log(`Calculating capacity for date: ${date.toDateString()}, period: ${periodCode}, dayType: ${dayType}`);
     const grid = this.vacationGrids[dayType]?.[periodCode];
 
-    if (!grid || grid.length === 0) {
+    if (!grid || !grid.grid || grid.grid.length === 0) {
       console.warn(`No vacation grid found for ${dayType}/${periodCode}. Returning zero capacity.`);
-      return Array(96).fill(0); // 96 periods of 15 minutes in a day
+      return { capacities: Array(96).fill(0), effectiveAgents: Array(96).fill(0) };
     }
+    console.log('Found grid:', grid);
 
     const selectedAgentProfiles = this.selectAgentProfiles(grid);
+    console.log('Selected Agent Profiles:', selectedAgentProfiles);
     if (Object.keys(selectedAgentProfiles).length === 0) {
       console.warn(`No agent profiles selected for ${dayType}/${periodCode}. Returning zero capacity.`);
-      return Array(96).fill(0);
+      return { capacities: Array(96).fill(0), effectiveAgents: Array(96).fill(0) };
     }
 
     const capacities = [];
+    const effectiveAgentsRawValues = []; // Declare effectiveAgentsRawValues
     for (let i = 0; i < 96; i++) { // Iterate through 15-minute intervals of the day
       const currentTimestamp = new Date(date);
       currentTimestamp.setHours(0, 0, 0, 0); // Start of the day
       currentTimestamp.setMinutes(i * 15);
 
       const hourMinuteStr = `${String(currentTimestamp.getHours()).padStart(2, '0')}h${String(currentTimestamp.getMinutes()).padStart(2, '0')}`;
+      console.log(`Processing slot ${hourMinuteStr}`);
 
-      let agentsAtThisSlot = 0;
-      for (const agentId in selectedAgentProfiles) {
-        const profile = selectedAgentProfiles[agentId];
-        // Check if the agent is active ('1') or 'C' (Chef) at this specific time slot
-        // The Python script only counts '1', so we'll stick to that for now.
-        // 'C' and 'P' are for chef and presence, not active agents for capacity calculation
-        if (profile[hourMinuteStr] === '1') {
-          agentsAtThisSlot++;
-        }
-      }
+      const agentsAtThisSlot = this.countActiveAgents(selectedAgentProfiles, hourMinuteStr);
+      console.log(`Agents at ${hourMinuteStr}:`, agentsAtThisSlot);
 
       const sivReduction = this.getSIVReduction(periodCode, dayType, currentTimestamp, sivHypothesis);
+      console.log(`SIV Reduction at ${hourMinuteStr}:`, sivReduction);
       const effectiveAgents = Math.max(0, agentsAtThisSlot - sivReduction);
+      console.log(`Effective Agents at ${hourMinuteStr}:`, effectiveAgents);
       
       capacities.push(this.staffingLookup(effectiveAgents));
+      effectiveAgentsRawValues.push(effectiveAgents); // Store raw effective agents
     }
 
     // Apply rolling average as per Python script
     const finalCapacities = this.applyHourlyAverage(capacities);
     
-    // Also return the effective agents before averaging for min/max display
-    const effectiveAgentsRaw = effectiveAgentsPerSlot; // Store the raw effective agents before capacity conversion
-
     return {
       capacities: finalCapacities,
-      effectiveAgents: effectiveAgentsRaw
+      effectiveAgents: effectiveAgentsRawValues // Return the stored raw effective agents
     };
   }
 }
