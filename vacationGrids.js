@@ -22,28 +22,40 @@ const vacationGrids = {
 // Function to parse a CSV string into an array of objects
 // Handles semicolon delimiter and replaces empty cells with "0"
 function parseCsv(csvString) {
-  const lines = csvString.trim().split('\n');
+  const lines = csvString.trim().split('\n').filter(line => line.trim() !== '');
   if (lines.length < 2) {
     return []; // No data rows
   }
 
-  const headers = lines[0].split(';');
+  // --- CORRECTION CLÉ ---
+  // Normaliser les en-têtes : minuscules, sans accents, pour un accès fiable.
+  const headers = lines[0].split(';').map(h => 
+    h.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  );
+
   const data = [];
 
   for (let i = 1; i < lines.length; i++) {
     const values = lines[i].split(';');
     const rowObject = {};
 
-    // Iterate through headers and values, skipping the "Priorité" column (index 0)
-    for (let j = 1; j < headers.length; j++) {
-      const header = headers[j];
-      let value = values[j] ? values[j].trim() : "0"; // Replace empty/undefined with "0"
+    for (let j = 0; j < headers.length; j++) {
+      const header = headers[j]; // Sera "priorite", "vacation", "00:00:00", etc.
+      let value = values[j] ? values[j].trim() : "0";
 
-      // Special handling for vacation name (it should not be '0' if empty)
-      if (header === "Vacation" && value === "0") {
-        value = ""; // Keep Vacation name empty if it was truly empty in CSV
+      if (header === "vacation" && value === "0") {
+        value = ""; 
       }
-      rowObject[header] = value;
+      
+      // --- CORRECTION PRIORITÉ ---
+      // La première colonne contient l'ID de l'agent (M#01, etc.), pas la priorité
+      // La priorité est l'ordre d'apparition dans le fichier (index de ligne)
+      if (header === "priorite") {
+        // La priorité est simplement l'ordre d'apparition (i-1 car on commence à la ligne 1)
+        rowObject[header] = i - 1;
+      } else {
+        rowObject[header] = value;
+      }
     }
     data.push(rowObject);
   }

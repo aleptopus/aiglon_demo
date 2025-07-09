@@ -77,47 +77,49 @@ class CapacityCalculator {
   }
 
   selectAgentProfiles(gridData) {
-    console.log('selectAgentProfiles - gridData:', gridData);
-    console.log('selectAgentProfiles - gridData.grid:', gridData.grid); // Add this log
     if (!gridData || !gridData.grid || gridData.grid.length === 0) {
-      console.warn('selectAgentProfiles - Invalid gridData or empty grid.');
+      console.warn('selectAgentProfiles - Grille de vacation invalide ou vide.');
       return {};
     }
     
-    // Filtrer les vacations non-chef et trier par priorité
+    // --- CORRECTION CLÉ ---
+    // Utiliser "vacation" et "priorite" en minuscules, car les en-têtes sont maintenant normalisés.
     const nonChefProfiles = gridData.grid
       .filter(profile => {
-        console.log('selectAgentProfiles - Checking profile:', profile); // Log the entire profile object
-        console.log('selectAgentProfiles - Checking profile.vacation:', profile.vacation);
-        return !['JC', 'MC', 'NC'].includes(profile.vacation);
+        const vacationName = (profile.vacation || "").toUpperCase().trim();
+        return !['JC', 'MC', 'NC'].includes(vacationName);
       })
-      .sort((a, b) => a.priorite - b.priorite);
+      .sort((a, b) => a.priorite - b.priorite); // Tri simple car 'priorite' est maintenant un nombre fiable.
     
-    console.log('selectAgentProfiles - nonChefProfiles:', nonChefProfiles);
-
-    // Prendre les 7 premiers profils
+    // Sélectionner les 7 premiers profils après filtrage et tri
     const selectedProfiles = nonChefProfiles.slice(0, 7);
     
-    console.log('selectAgentProfiles - selectedProfiles (sliced):', selectedProfiles);
-
-    // Créer un mapping d'agents
     const agentProfiles = {};
     selectedProfiles.forEach((profile, i) => {
       agentProfiles[i] = profile;
     });
     
+    console.log(`✓ Simulé ${Object.keys(agentProfiles).length} agents (7 premiers non-chefs) mappés.`);
     return agentProfiles;
   }
 
   countActiveAgents(selectedAgentProfiles, hourMinuteStr) {
     let agentsAtThisSlot = 0;
+    console.log(`countActiveAgents - Checking slot ${hourMinuteStr}`);
+    console.log(`countActiveAgents - selectedAgentProfiles:`, selectedAgentProfiles);
+    
     for (const agentId in selectedAgentProfiles) {
       const profile = selectedAgentProfiles[agentId];
+      console.log(`countActiveAgents - Agent ${agentId} profile:`, profile);
+      console.log(`countActiveAgents - Agent ${agentId} value at ${hourMinuteStr}:`, profile[hourMinuteStr]);
+      
       // Check if the agent is active ('1') at this specific time slot
       if (profile[hourMinuteStr] === '1') {
         agentsAtThisSlot++;
+        console.log(`countActiveAgents - Agent ${agentId} is ACTIVE at ${hourMinuteStr}`);
       }
     }
+    console.log(`countActiveAgents - Total agents at ${hourMinuteStr}: ${agentsAtThisSlot}`);
     return agentsAtThisSlot;
   }
 
@@ -164,6 +166,11 @@ class CapacityCalculator {
     console.log(`Calculating capacity for date: ${date.toDateString()}, period: ${periodCode}, dayType: ${dayType}`);
     const grid = this.vacationGrids[dayType]?.[periodCode];
 
+    console.log('Debug - vacationGrids:', this.vacationGrids);
+    console.log('Debug - dayType:', dayType);
+    console.log('Debug - periodCode:', periodCode);
+    console.log('Debug - grid before check:', grid);
+
     if (!grid || !grid.grid || grid.grid.length === 0) {
       console.warn(`No vacation grid found for ${dayType}/${periodCode}. Returning zero capacity.`);
       return { capacities: Array(96).fill(0), effectiveAgents: Array(96).fill(0) };
@@ -183,8 +190,9 @@ class CapacityCalculator {
       const currentTimestamp = new Date(date);
       currentTimestamp.setHours(0, 0, 0, 0); // Start of the day
       currentTimestamp.setMinutes(i * 15);
+      currentTimestamp.setSeconds(0); // Ensure seconds are 00
 
-      const hourMinuteStr = `${String(currentTimestamp.getHours()).padStart(2, '0')}h${String(currentTimestamp.getMinutes()).padStart(2, '0')}`;
+      const hourMinuteStr = `${String(currentTimestamp.getHours()).padStart(2, '0')}:${String(currentTimestamp.getMinutes()).padStart(2, '0')}:00`;
       console.log(`Processing slot ${hourMinuteStr}`);
 
       const agentsAtThisSlot = this.countActiveAgents(selectedAgentProfiles, hourMinuteStr);

@@ -131,6 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         createToggleButtons();
         createDateSlider();
+        console.log('initializeDashboard - state.grilleVacations before updateDashboard:', state.grilleVacations);
+        console.log('initializeDashboard - state.compoEquipe before updateDashboard:', state.compoEquipe);
         updateDashboard(false);
     }
     
@@ -276,10 +278,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // const isSingleDay = state.currentStartDate.toDateString() === state.currentEndDate.toDateString(); // Removed as per user request
-        console.log('state.grilleVacations before hasCapacityData check:', state.grilleVacations);
-        console.log('state.compoEquipe before hasCapacityData check:', state.compoEquipe);
+        console.log('updateDashboard - state.grilleVacations:', state.grilleVacations);
+        console.log('updateDashboard - state.compoEquipe:', state.compoEquipe);
         const hasCapacityData = Object.keys(state.grilleVacations).length > 0 && Object.keys(state.compoEquipe).length > 0;
-        console.log('hasCapacityData:', hasCapacityData);
+        console.log('updateDashboard - hasCapacityData:', hasCapacityData);
 
         if (hasCapacityData) { // Capacity should always be shown if data is available
             console.log('Removing hidden class from capacityControlsCard');
@@ -338,28 +340,29 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         });
 
-        // Capacity is now always shown if hasCapacityData is true
+        // La capacité est maintenant toujours affichée si hasCapacityData est vrai
         if (Object.keys(state.grilleVacations).length > 0 && Object.keys(state.compoEquipe).length > 0) {
-            elements.sivValue.textContent = `${elements.sivSlider.value}%`;
-            const staffing = {
-                M: parseInt(elements.staffMatin.value),
-                J: parseInt(elements.staffJour.value),
-                N: parseInt(elements.staffNuit.value),
-            };
-            // Use the CapacityCalculator class
-            const capacityResult = capacityCalculator.calculateDailyCapacity(state.currentStartDate, staffing, elements.sivSlider.value);
+            const sivHypothesis = elements.sivSelect.value; // ex: "VFR fort"
+            
+            // --- CORRECTION CLÉ ---
+            // Appeler la fonction avec uniquement les arguments nécessaires
+            const capacityResult = capacityCalculator.calculateDailyCapacity(
+                state.currentStartDate, // La date à analyser
+                sivHypothesis           // L'hypothèse SIV sélectionnée
+            );
+
             const capacityData = capacityResult.capacities;
-            console.log('Capacity Data:', capacityData);
+            console.log('Données de capacité finales:', capacityData);
             
             datasets.push({
                 label: 'Capacité',
                 data: capacityData,
-                backgroundColor: 'rgba(255, 158, 100, 0.2)', // Using accent-orange with transparency
-                borderColor: 'rgba(255, 158, 100, 0.8)', // Using accent-orange
+                backgroundColor: 'rgba(255, 158, 100, 0.2)',
+                borderColor: 'rgba(255, 158, 100, 0.8)',
                 type: 'line',
                 fill: true,
                 pointRadius: 0,
-                order: -1 // Draw behind bars
+                order: -1
             });
         }
 
