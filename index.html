@@ -9,8 +9,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <!-- Chart.js scripts removed -->
+    <!-- React and Nivo UMDs -->
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@nivo/core@0.80.0/dist/nivo-core.umd.js"></script> <!-- Using a fixed version for stability -->
+    <script src="https://unpkg.com/@nivo/line@0.80.0/dist/nivo-line.umd.js"></script>
+    <script src="https://unpkg.com/@nivo/bar@0.80.0/dist/nivo-bar.umd.js"></script>
 </head>
 <body>
     <div class="main-wrapper">
@@ -125,8 +130,8 @@
                             <h2 class="card-title" id="trafficChartTitle">Trafic moyen par créneau horaire</h2>
                              <button id="toggleChartTypeBtn" class="button-secondary">Vue Côte à Côte</button>
                         </div>
-                        <div class="chart-container">
-                            <canvas id="trafficChart"></canvas>
+                        <div id="nivoChartContainer" class="chart-container">
+                            <!-- Nivo chart will be rendered here by React -->
                         </div>
                     </div>
 

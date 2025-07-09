@@ -2,10 +2,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements & State ---
     const elements = {
         csvFile: document.getElementById('csvFileInput'),
-        jsonFile: document.getElementById('jsonFileInput'), // Restored
+        jsonFile: document.getElementById('jsonFileInput'),
         csvName: document.getElementById('csvFileName'),
-        jsonName: document.getElementById('jsonFileName'),   // Restored
-        jsonButton: document.querySelector('button[onclick*="jsonFileInput"]'), // Restored
+        jsonName: document.getElementById('jsonFileName'),
+        jsonButton: document.querySelector('button[onclick*="jsonFileInput"]'),
         initialMsg: document.getElementById('initialMessage'),
         dashboard: document.getElementById('dashboardContent'),
         dateStartInput: document.getElementById('dateStartInput'),
@@ -17,8 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
         avgArr: document.getElementById('avgArr'),
         avgTma: document.getElementById('avgTma'),
         avgTotal: document.getElementById('avgTotal'),
-        trafficChartTitle: document.getElementById('trafficChartTitle'), // Added for dynamic title
-        chartCanvas: document.getElementById('trafficChart').getContext('2d'),
+        trafficChartTitle: document.getElementById('trafficChartTitle'),
+        nivoChartContainer: document.getElementById('nivoChartContainer'),
         toggleChartBtn: document.getElementById('toggleChartTypeBtn'),
         summaryTableHead: document.querySelector('#summaryTable thead'),
         summaryTableBody: document.querySelector('#summaryTable tbody'),
@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
         sivValue: document.getElementById('sivValue'),
         periodSelect: document.getElementById('periodSelect'),
         sivSelect: document.getElementById('sivSelect'),
-        // Min/Max stat display elements
         depMinMaxDate: document.getElementById('depMinMaxDate'),
         arrMinMaxDate: document.getElementById('arrMinMaxDate'),
         tmaMinMaxDate: document.getElementById('tmaMinMaxDate'),
@@ -41,19 +40,17 @@ document.addEventListener('DOMContentLoaded', () => {
     let state = {
         cohorData: [],
         tmaMap: new Map(),
-        grilleVacations: vacationGrids, // Initialize with global data
-        compoEquipe: staffingMap, // Initialize with global data
+        grilleVacations: vacationGrids,
+        compoEquipe: staffingMap,
         combinedData: [],
         fullDateRange: [],
         currentStartDate: null,
         currentEndDate: null,
         isStacked: true,
-        trafficChart: null,
         windowDurationMs: 0,
-        capacityCalculatorInstance: null, // Added for CapacityCalculator
+        capacityCalculatorInstance: null,
     };
     
-    // --- Initialization Functions ---
     let cohorDataLoaded = false;
     let tmaDataLoaded = false;
 
@@ -65,12 +62,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 console.warn("Dashboard initialization skipped: COHOR data or TMA data missing/empty after loading attempts.");
                 if (state.cohorData.length === 0 && cohorDataLoaded) {
-                    // Alert/message is handled by handleCohorFile
+                    // Alert handled in handleCohorFile
                 }
                 if (state.tmaMap.size === 0 && tmaDataLoaded) {
-                    if (elements.initialMsg && !elements.initialMsg.textContent.includes("Erreur")) {
+                    if (elements.initialMsg && elements.initialMsg.textContent && !elements.initialMsg.textContent.includes("Erreur")) {
                         elements.initialMsg.innerHTML = `<p style="color: orange;">Données TMA non disponibles ou vides. Certaines fonctionnalités peuvent être limitées.</p>`;
-                        elements.initialMsg.classList.remove('hidden'); // Ensure message is visible
+                        elements.initialMsg.classList.remove('hidden');
                     }
                 }
             }
@@ -81,20 +78,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.grilleVacations && typeof state.grilleVacations === 'object' && Object.keys(state.grilleVacations).length > 0 &&
             state.compoEquipe && typeof state.compoEquipe === 'object' && Object.keys(state.compoEquipe).length > 0 &&
             sivRules && typeof sivRules === 'object' && Object.keys(sivRules).length > 0) {
-
             state.capacityCalculatorInstance = new CapacityCalculator(
-                state.compoEquipe, // This is staffingMap from staffingMap.js
-                sivRules,          // This is sivRules from sivRules.js
-                state.grilleVacations // This is vacationGrids from vacationGrids.js
+                state.compoEquipe,
+                sivRules,
+                state.grilleVacations
             );
             console.log("CapacityCalculator initialized successfully.");
         } else {
-            console.warn("CapacityCalculator could not be initialized due to missing critical data (staffingMap, sivRules, or vacationGrids).");
-            // Optionally, disable capacity-related UI features if initialization fails
+            console.warn("CapacityCalculator could not be initialized due to missing critical data.");
         }
     }
 
-    // --- Constants ---
     const DAYS_OF_WEEK = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
     const TRAFFIC_TYPES = [
         { key: "isArrival", label: "Arrivées", color: 'rgba(158, 206, 106, 0.8)' },
@@ -102,9 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
         { key: "tma", label: "TMA", color: 'rgba(122, 162, 247, 0.8)' }
     ];
 
-    // --- Event Listeners ---
     elements.csvFile.addEventListener('change', handleCohorFile);
-    elements.jsonFile.addEventListener('change', handleTmaFile); // Restored
+    elements.jsonFile.addEventListener('change', handleTmaFile);
     elements.toggleChartBtn.addEventListener('click', toggleChartStacking);
     [elements.dateStartInput, elements.dateEndInput].forEach(el => {
         if (el) {
@@ -120,7 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     initializeCapacityCalculator();
-    // loadDefaultTmaData(); // Removed call, will be loaded via file input
 
     function handleCohorFile(event) {
         const file = event.target.files[0];
@@ -157,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsText(file, 'UTF-8');
     }
 
-    function handleTmaFile(event) { // Restored function
+    function handleTmaFile(event) {
         const file = event.target.files[0];
         if (!file) return;
         if (elements.jsonName) elements.jsonName.textContent = file.name;
@@ -192,8 +184,6 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsText(file, 'UTF-8');
     }
 
-    // async function loadDefaultTmaData() { ... } // This function is removed
-
     function initializeDashboard() {
         elements.initialMsg.classList.add('hidden');
         elements.dashboard.classList.remove('hidden');
@@ -202,13 +192,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
         combineAllData();
         const dates = [...new Set(state.combinedData.map(d => d.date.getTime()))].sort();
-        state.fullDateRange = [new Date(dates[0]), new Date(dates[dates.length - 1])];
+        if (dates.length === 0) {
+            alert("Aucune donnée à afficher après combinaison des fichiers. Vérifiez les fichiers et les filtres.");
+            const todayForRange = new Date();
+            const tomorrowForRange = new Date(todayForRange);
+            tomorrowForRange.setDate(todayForRange.getDate() + 1);
+            state.fullDateRange = [todayForRange, tomorrowForRange];
+        } else {
+            state.fullDateRange = [new Date(dates[0]), new Date(dates[dates.length - 1])];
+        }
         
+        if (!state.fullDateRange[0] || isNaN(state.fullDateRange[0].getTime())) {
+            console.error("fullDateRange start is invalid after data processing. Dashboard initialization cannot fully proceed.");
+            elements.initialMsg.innerHTML = `<p style="color: red;">Erreur: Impossible de déterminer la plage de dates à partir des données. Veuillez vérifier les fichiers.</p>`;
+            elements.initialMsg.classList.remove('hidden');
+            return;
+        }
+
         const sevenDaysLater = new Date(state.fullDateRange[0]);
         sevenDaysLater.setDate(sevenDaysLater.getDate() + 6);
-        state.currentStartDate = state.fullDateRange[0];
-        state.currentEndDate = sevenDaysLater > state.fullDateRange[1] ? state.fullDateRange[1] : sevenDaysLater;
+
+        state.currentStartDate = new Date(state.fullDateRange[0]);
+        let potentialEndDate = new Date(sevenDaysLater > state.fullDateRange[1] ? state.fullDateRange[1] : sevenDaysLater);
+        if (potentialEndDate < state.currentStartDate) {
+            potentialEndDate = new Date(state.currentStartDate);
+            if (potentialEndDate > state.fullDateRange[1]) potentialEndDate = new Date(state.fullDateRange[1]);
+        }
+        state.currentEndDate = potentialEndDate;
+
         state.windowDurationMs = state.currentEndDate.getTime() - state.currentStartDate.getTime();
+        if (state.windowDurationMs < 0) state.windowDurationMs = 0;
         
         elements.dateStartInput.valueAsDate = state.currentStartDate;
         elements.dateEndInput.valueAsDate = state.currentEndDate;
@@ -218,32 +231,43 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDashboard(false);
     }
     
-    // --- Data Processing ---
     function processCohorCSV(csvText) {
         const lines = csvText.split('\n').filter(line => line.trim() !== '');
+        if (lines.length < 2) {
+            console.warn("COHOR CSV is empty or has no data rows.");
+            return [];
+        }
         const header = lines[0].split(';').map(h => h.trim());
         const dataRows = lines.slice(1);
         const colIndices = { from: header.indexOf("From"), to: header.indexOf("To"), time: header.indexOf("Time"), ad: header.indexOf("A/D"), opsDays: header.indexOf("Ops Days"), airport: header.indexOf("Airport") };
         
         if (Object.values(colIndices).some(index => index === -1)) {
-            alert("Une ou plusieurs colonnes requises (From, To, Time, A/D, Ops Days, Airport) sont manquantes dans le fichier COHOR.");
+            console.error("Colonnes COHOR manquantes:", colIndices);
             return [];
         }
 
         let flights = [];
         dataRows.forEach(row => {
             const values = row.split(';').map(v => v.trim());
-            if (values.length < 6 || values[colIndices.airport]?.toUpperCase() !== "LYS") return;
+            if (values.length < Math.max(colIndices.from, colIndices.to, colIndices.time, colIndices.ad, colIndices.opsDays, colIndices.airport) + 1 || values[colIndices.airport]?.toUpperCase() !== "LYS") {
+                return;
+            }
             try {
                 const fromDateStr = values[colIndices.from], toDateStr = values[colIndices.to];
                 const timeStr = values[colIndices.time].padStart(4, '0'), opsDaysStr = values[colIndices.opsDays].padStart(7, '0');
-                let currentDate = new Date(`${fromDateStr.slice(0, 4)}-${fromDateStr.slice(4, 6)}-${fromDateStr.slice(6, 8)}T00:00:00Z`);
-                const toDate = new Date(`${toDateStr.slice(0, 4)}-${toDateStr.slice(4, 6)}-${toDateStr.slice(6, 8)}T00:00:00Z`);
                 
-                while (currentDate <= toDate) {
+                let currentDate = new Date(Date.UTC(parseInt(fromDateStr.slice(0, 4)), parseInt(fromDateStr.slice(4, 6)) - 1, parseInt(fromDateStr.slice(6, 8))));
+                const finalToDate = new Date(Date.UTC( parseInt(toDateStr.slice(0, 4)), parseInt(toDateStr.slice(4, 6)) - 1, parseInt(toDateStr.slice(6, 8))));
+
+                if (isNaN(currentDate.getTime()) || isNaN(finalToDate.getTime())) {
+                    console.warn("Invalid date format in COHOR row, skipping:", row);
+                    return;
+                }
+
+                while (currentDate <= finalToDate) {
                     const dayOfWeek = (currentDate.getUTCDay() + 6) % 7;
                     if (opsDaysStr[dayOfWeek] !== '0') {
-                        const utcDt = new Date(`${currentDate.toISOString().slice(0, 10)}T${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}:00Z`);
+                        const utcDt = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate(), parseInt(timeStr.slice(0, 2)), parseInt(timeStr.slice(2, 4))));
                         const offsetMinutes = values[colIndices.ad] === 'A' ? -24 : (values[colIndices.ad] === 'D' ? 11 : 0);
                         const localTmaDt = new Date(utcDt.getTime() + offsetMinutes * 60 * 1000);
                         const makeSlot = (date) => `${String(date.getHours()).padStart(2, '0')}:${String(Math.floor(date.getMinutes() / 15) * 15).padStart(2, '0')}`;
@@ -257,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     currentDate.setUTCDate(currentDate.getUTCDate() + 1);
                 }
-            } catch (e) { console.warn("Ligne COHOR ignorée:", row, e); }
+            } catch (e) { console.warn("Ligne COHOR ignorée (erreur pendant traitement):", row, e); }
         });
         const today = new Date(); today.setHours(0, 0, 0, 0);
         return flights.filter(f => f.date >= today);
@@ -265,45 +289,61 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function processTmaJSON(jsonText) {
         const monthMap = {"Janvier": 1,"Février": 2,"Mars": 3,"Avril": 4,"Mai": 5,"Juin": 6,"Juillet": 7,"Août": 8,"Septembre": 9,"Octobre": 10,"Novembre": 11,"Décembre": 12};
-        const rawTma = JSON.parse(jsonText);
+        let rawTma = [];
+        try {
+            rawTma = JSON.parse(jsonText);
+        } catch (e) {
+            console.error("Invalid TMA JSON format:", e);
+            return new Map();
+        }
         const tmaMap = new Map();
-        rawTma.forEach(item => {
-            const month = monthMap[item.Mois];
-            const dayType = item.Jour_Semaine;
-            const slot = item.Créneau_Horaire.split(' - ')[0].replace('h', ':');
-            tmaMap.set(`${month}-${dayType}-${slot}`, item.mean);
-        });
+        if (Array.isArray(rawTma)) {
+            rawTma.forEach(item => {
+                if (item && item.Mois && item.Jour_Semaine && item.Créneau_Horaire && typeof item.mean !== 'undefined') {
+                    const month = monthMap[item.Mois];
+                    const dayType = item.Jour_Semaine;
+                    const slot = item.Créneau_Horaire.split(' - ')[0].replace('h', ':');
+                    tmaMap.set(`${month}-${dayType}-${slot}`, item.mean);
+                } else {
+                    console.warn("Invalid item in TMA JSON:", item);
+                }
+            });
+        } else {
+            console.error("TMA JSON is not an array.");
+        }
         return tmaMap;
     }
     
     function combineAllData() {
+        if (!state.cohorData || !state.tmaMap) {
+             console.warn("Cannot combine data: COHOR or TMA data not ready.");
+             state.combinedData = [];
+             return;
+        }
         const getDayType = (date) => DAYS_OF_WEEK[(date.getDay() + 6) % 7];
         state.combinedData = state.cohorData.map(flight => {
             const month = flight.datetime.getMonth() + 1;
             const dayType = getDayType(flight.datetime);
-        // TMA data is hourly. Get the HH:00 slot for the flight's datetime.
-        const flightHourSlot = `${String(flight.datetime.getHours()).padStart(2, '0')}:00`;
-        const tmaKey = `${month}-${dayType}-${flightHourSlot}`;
-        const tmaValue = state.tmaMap.get(tmaKey) || 0; // Get the hourly TMA value
-
-        // Assign this hourly TMA value to the flight.
-        // In updateMainChart, the tmaTracker logic will ensure this hourly value is
-        // attributed once per 15-min slot if there's activity in that slot.
+            const flightHourSlot = `${String(flight.datetime.getHours()).padStart(2, '0')}:00`;
+            const tmaKey = `${month}-${dayType}-${flightHourSlot}`;
+            const tmaValue = state.tmaMap.get(tmaKey) || 0;
             return { ...flight, tma: tmaValue };
         });
     }
 
-    // --- UI Creation & Interaction ---
     function createToggleButtons() {
         elements.dayToggles.innerHTML = DAYS_OF_WEEK.map((day, i) => `<input type="checkbox" id="day-${i}" value="${i}" checked><label for="day-${i}">${day.substring(0,3)}</label>`).join('');
         elements.trafficToggles.innerHTML = TRAFFIC_TYPES.map((type) => `<input type="checkbox" id="type-${type.key}" value="${type.key}" checked><label for="type-${type.key}">${type.label}</label>`).join('');
-        document.querySelectorAll('.toggle-group input').forEach(cb => cb.addEventListener('change', updateDashboard));
+        document.querySelectorAll('.toggle-group input').forEach(cb => cb.addEventListener('change', () => updateDashboard(false)));
     }
 
     function createDateSlider() {
         const [minDate, maxDate] = state.fullDateRange;
+        if (!minDate || !maxDate || isNaN(minDate.getTime()) || isNaN(maxDate.getTime())) {
+            console.warn("Date range not valid for slider creation."); return;
+        }
         const containerWidth = elements.dateSliderContainer.clientWidth;
-        if (containerWidth === 0) return; // Don't draw if not visible
+        if (containerWidth === 0) return;
         const margin = { right: 20, left: 20 };
         const width = containerWidth - margin.left - margin.right;
         
@@ -320,11 +360,18 @@ document.addEventListener('DOMContentLoaded', () => {
             .on("start.interrupt", () => slider.interrupt())
             .on("drag", (event) => {
                 let newStartDate = x.invert(event.x);
+                if (isNaN(newStartDate.getTime())) return;
+
                 let newEndDate = new Date(newStartDate.getTime() + state.windowDurationMs);
                 
                 if (newEndDate > maxDate) {
-                    newEndDate = maxDate;
+                    newEndDate = new Date(maxDate);
                     newStartDate = new Date(newEndDate.getTime() - state.windowDurationMs);
+                }
+                if (newStartDate < minDate) {
+                    newStartDate = new Date(minDate);
+                    newEndDate = new Date(newStartDate.getTime() + state.windowDurationMs);
+                     if (newEndDate > maxDate) newEndDate = new Date(maxDate);
                 }
                 
                 state.currentStartDate = newStartDate;
@@ -341,43 +388,79 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateFromDateInputs() {
-        state.currentStartDate = elements.dateStartInput.valueAsDate;
-        state.currentEndDate = elements.dateEndInput.valueAsDate;
-        state.windowDurationMs = state.currentEndDate.getTime() - state.currentStartDate.getTime();
+        const newStartDate = elements.dateStartInput.valueAsDate;
+        const newEndDate = elements.dateEndInput.valueAsDate;
+
+        if (newStartDate && newEndDate && newStartDate <= newEndDate) {
+            state.currentStartDate = newStartDate;
+            state.currentEndDate = newEndDate;
+            state.windowDurationMs = state.currentEndDate.getTime() - state.currentStartDate.getTime();
+            if (state.windowDurationMs < 0) state.windowDurationMs = 0;
+
+            if (state.fullDateRange && state.fullDateRange.length === 2) {
+                 if (state.currentStartDate < state.fullDateRange[0]) state.currentStartDate = new Date(state.fullDateRange[0]);
+                 if (state.currentEndDate > state.fullDateRange[1]) state.currentEndDate = new Date(state.fullDateRange[1]);
+                 if (state.currentStartDate > state.currentEndDate) state.currentStartDate = new Date(state.currentEndDate);
+                 elements.dateStartInput.valueAsDate = state.currentStartDate;
+                 elements.dateEndInput.valueAsDate = state.currentEndDate;
+            }
+
+        } else {
+            console.warn("Invalid date range from inputs. Start date might be after end date.");
+            elements.dateStartInput.valueAsDate = state.currentStartDate;
+            elements.dateEndInput.valueAsDate = state.currentEndDate;
+        }
         updateSliderHandle();
         updateDashboard(false);
     }
     
     function updateSliderHandle() {
-        if (!state.fullDateRange[0] || elements.dateSliderContainer.clientWidth === 0) return;
+        if (!state.fullDateRange || state.fullDateRange.length < 2 || !state.currentStartDate || isNaN(state.currentStartDate.getTime()) || elements.dateSliderContainer.clientWidth === 0) return;
         const x = d3.scaleTime().domain(state.fullDateRange).range([0, elements.dateSliderContainer.clientWidth - 40]);
         d3.select(".slider-handle").attr("cx", x(state.currentStartDate));
     }
 
-    // --- Dashboard Update Logic ---
     function updateDashboard(redrawSlider = true) {
+        if (!state.cohorData || state.cohorData.length === 0 || !state.tmaMap || state.tmaMap.size === 0) {
+            if (!cohorDataLoaded || !tmaDataLoaded) {
+                console.log("UpdateDashboard: Waiting for COHOR and/or TMA data to be loaded.");
+            } else {
+                console.warn("UpdateDashboard: COHOR or TMA data is empty after loading. Cannot update dashboard.");
+                if (elements.initialMsg && elements.initialMsg.classList.contains('hidden')) {
+                    elements.initialMsg.innerHTML = `<p style="color: orange;">Données COHOR ou TMA manquantes ou vides. Impossible d'afficher le tableau de bord.</p>`;
+                    elements.initialMsg.classList.remove('hidden');
+                }
+            }
+            return;
+        }
+        if (state.combinedData.length === 0 && state.cohorData.length > 0 && state.tmaMap.size > 0) {
+             combineAllData();
+             if(state.combinedData.length === 0 && state.cohorData.length > 0) {
+                console.warn("Combined data is empty even after COHOR and TMA are loaded. This may indicate an issue with data combination or empty COHOR source.");
+             }
+        }
         if (state.combinedData.length === 0) return;
+
         if (redrawSlider) createDateSlider();
 
         const activeDays = [...elements.dayToggles.querySelectorAll('input:checked')].map(cb => parseInt(cb.value));
 
-        // Implement 06h to 06h filtering logic
         let filterStartDateTime = null;
         let filterEndDateTime = null;
 
-        if (state.currentStartDate && state.currentEndDate) {
+        if (state.currentStartDate && state.currentEndDate && !isNaN(state.currentStartDate.getTime()) && !isNaN(state.currentEndDate.getTime())) {
             filterStartDateTime = new Date(state.currentStartDate);
-            filterStartDateTime.setHours(6, 0, 0, 0); // Start date at 06:00 local
-
+            filterStartDateTime.setHours(6, 0, 0, 0);
             filterEndDateTime = new Date(state.currentEndDate);
-            // End date is inclusive for user selection, so target flights up to 05:59:59 on the day AFTER currentEndDate.
-            // Thus, the exclusive boundary is 06:00 on (currentEndDate + 1 day).
             filterEndDateTime.setDate(filterEndDateTime.getDate() + 1);
             filterEndDateTime.setHours(6, 0, 0, 0);
+        } else {
+            console.warn("Current start/end date is not valid for filtering.");
+            return;
         }
 
         const filtered = state.combinedData.filter(d => {
-            const dayOfWeek = (d.datetime.getDay() + 6) % 7; // d.datetime is local
+            const dayOfWeek = (d.datetime.getDay() + 6) % 7;
             let includeByDate = true;
             if (filterStartDateTime && filterEndDateTime) {
                 includeByDate = d.datetime >= filterStartDateTime && d.datetime < filterEndDateTime;
@@ -385,12 +468,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return includeByDate && activeDays.includes(dayOfWeek);
         });
         
-        const hasCapacityData = state.capacityCalculatorInstance !== null;
+        const hasCapacityCalculator = state.capacityCalculatorInstance !== null;
 
-        if (hasCapacityData && state.isStacked) {
+        if (hasCapacityCalculator && state.isStacked) {
             elements.capacityControlsCard.classList.remove('hidden');
         } else {
-            // Hide capacity controls if no data OR if not in stacked view
             elements.capacityControlsCard.classList.add('hidden');
         }
         
@@ -404,8 +486,6 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.toggleChartBtn.textContent = state.isStacked ? 'Vue Côte à Côte' : 'Vue Empilée';
         updateDashboard(false);
     }
-
-    // Old calculateCapacity function is removed as its logic is now in CapacityCalculator.js
     
     function updateMainChart(data) {
         const numDays = new Set(data.map(d => d.date.toDateString())).size || 1;
@@ -418,9 +498,13 @@ document.addEventListener('DOMContentLoaded', () => {
         data.forEach(d => {
             const slot = slotData.get(d.timeSlot);
             if(slot) {
-                slot.isArrival += d.isArrival; slot.isDeparture += d.isDeparture;
-                const tmaKey = `${d.date.toDateString()}-${d.timeSlot}`;
-                if (d.tma > 0 && !tmaTracker.has(tmaKey)) { slot.tma += d.tma; tmaTracker.add(tmaKey); }
+                slot.isArrival += d.isArrival;
+                slot.isDeparture += d.isDeparture;
+                const tmaUniqueKeyForSlot = `${d.date.toDateString()}-${d.timeSlot}`;
+                if (d.tma > 0 && !tmaTracker.has(tmaUniqueKeyForSlot)) {
+                    slot.tma += d.tma;
+                    tmaTracker.add(tmaUniqueKeyForSlot);
+                }
             }
         });
         
@@ -430,94 +514,224 @@ document.addEventListener('DOMContentLoaded', () => {
             let sums = { isArrival: 0, isDeparture: 0, tma: 0 };
             for (let j = i; j < Math.min(i + 4, sortedSlots.length); j++) {
                 const slotInfo = slotData.get(sortedSlots[j]);
-                sums.isArrival += slotInfo.isArrival; sums.isDeparture += slotInfo.isDeparture; sums.tma += slotInfo.tma;
+                sums.isArrival += slotInfo.isArrival;
+                sums.isDeparture += slotInfo.isDeparture;
+                sums.tma += slotInfo.tma;
             }
             rollingData.set(sortedSlots[i], {
-                isArrival: sums.isArrival / numDays, isDeparture: sums.isDeparture / numDays, tma: sums.tma / numDays,
+                isArrival: sums.isArrival / numDays,
+                isDeparture: sums.isDeparture / numDays,
+                tma: sums.tma / numDays,
             });
         }
         
-        const activeTraffic = [...elements.trafficToggles.querySelectorAll('input:checked')].map(cb => cb.value);
-        const datasets = TRAFFIC_TYPES.map(type => ({
-            label: type.label, data: Array.from(rollingData.values()).map(d => d[type.key]),
-            backgroundColor: type.color, hidden: !activeTraffic.includes(type.key),
-            type: 'bar',
+        const nivoBarData = sortedSlots.map(slot => ({
+            "slot": slot,
+            "Arrivées": parseFloat((rollingData.get(slot)?.isArrival || 0).toFixed(1)),
+            "Départs": parseFloat((rollingData.get(slot)?.isDeparture || 0).toFixed(1)),
+            "TMA": parseFloat((rollingData.get(slot)?.tma || 0).toFixed(1))
         }));
 
-        // Use new CapacityCalculator instance
-        if (state.capacityCalculatorInstance && state.currentStartDate) {
+        let nivoLineData = [];
+        let activeCapacity = false;
+        const selectedPeriodKey = elements.periodSelect.value;
+
+        if (state.capacityCalculatorInstance && state.currentStartDate && !isNaN(state.currentStartDate.getTime()) && state.isStacked) {
             const sivHypothesis = elements.sivSelect.value;
-            const selectedPeriod = elements.periodSelect.value; // "Hiv", "Cha", "Cre"
             
-            // The 'activeVacations' parameter is not used by the Python-ported logic in CapacityCalculator,
-            // as it selects profiles based on hardcoded rules (top 7 non-chef). Pass null.
             const capacityResult = state.capacityCalculatorInstance.calculateDailyCapacity(
-                state.currentStartDate, // Date for which to calculate capacity
-                null,                   // activeVacations (not used by current logic)
+                state.currentStartDate,
+                null,
                 sivHypothesis,
-                selectedPeriod          // Pass the user-selected period
+                selectedPeriodKey
             );
-            const capacityData = capacityResult.capacities;
-            updateCapacityAgentMinMaxStats(capacityResult); // Call new function
+            updateCapacityAgentMinMaxStats(capacityResult);
 
-            // Update SIV display text if sivSlider is still used for display purposes
-            // elements.sivValue.textContent = `${elements.sivSlider.value}%`; // This might be misleading now
-
-            const capacityDataset = {
-                label: `Capacité (${selectedPeriod})`,
-                data: capacityData,
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                borderColor: 'rgba(0, 0, 0, 0.5)',
-                type: 'line',
-                fill: true,
-                pointRadius: 0,
-                order: -1, // Draw behind bars
-                hidden: !state.isStacked // Hide if not in stacked view
-            };
-            datasets.push(capacityDataset);
-        } else if (state.capacityCalculatorInstance && !state.isStacked) {
-            // Ensure capacity is not shown and controls are hidden if not stacked
+            if (capacityResult && capacityResult.capacities) {
+                const capacityPoints = capacityResult.capacities.map((value, index) => ({
+                    x: sortedSlots[index],
+                    y: parseFloat(value.toFixed(1))
+                }));
+                nivoLineData = [{
+                    id: `Capacité (${selectedPeriodKey})`,
+                    data: capacityPoints
+                }];
+                activeCapacity = true;
+            }
+        } else {
+            updateCapacityAgentMinMaxStats(null);
             if (elements.capacityControlsCard) {
                 elements.capacityControlsCard.classList.add('hidden');
             }
         }
 
+        const activeTrafficKeys = TRAFFIC_TYPES
+            .filter(type => {
+                const toggle = elements.trafficToggles.querySelector(`input[value="${type.key}"]`);
+                return toggle ? toggle.checked : false;
+            })
+            .map(type => type.label);
 
-        if (state.trafficChart) state.trafficChart.destroy();
-        state.trafficChart = new Chart(elements.chartCanvas, {
-            type: 'bar',
-            data: { labels: sortedSlots, datasets },
-            options: {
-                responsive: true, maintainAspectRatio: false, animation: { duration: 500 },
-                plugins: {
-                    legend: { labels: { color: 'var(--text-primary)' } },
-                    tooltip: {
-                        enabled: true, mode: 'index',
-                        titleAlign: 'center', bodyAlign: 'center', footerAlign: 'center',
-                        callbacks: {
-                            title: function(context) {
-                                const label = context[0].label;
-                                const h = parseInt(label.split(':')[0]); const m = parseInt(label.split(':')[1]);
-                                const startDate = new Date(2000, 0, 1, h, m);
-                                const endDate = new Date(startDate.getTime() + 59 * 60 * 1000);
-                                const formatTime = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                                return `Créneau ${formatTime(startDate)} - ${formatTime(endDate)}`;
-                            },
-                            label: function(context) { return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}`; },
-                            footer: function(context) {
-                                let total = 0;
-                                context.forEach(item => { if (!item.dataset.hidden) { total += item.parsed.y; } });
-                                return `\nTotal: ${total.toFixed(1)}`;
-                            }
-                        }
-                    }
+        renderNivoChart(nivoBarData, activeTrafficKeys, nivoLineData, activeCapacity, state.isStacked);
+    }
+
+    function renderNivoChart(barData, barKeys, lineData, isCapacityActive, isStackedView) {
+        if (!elements.nivoChartContainer || typeof ReactDOM === 'undefined' || typeof React === 'undefined' || typeof NivoBar === 'undefined' || (isCapacityActive && lineData.length > 0 && typeof NivoLine === 'undefined')) {
+            console.error("Nivo chart container or essential Nivo/React libraries not found/loaded.");
+            if(elements.nivoChartContainer) elements.nivoChartContainer.innerHTML = '<p style="color:red;">Erreur: Bibliothèques de graphiques non chargées.</p>';
+            return;
+        }
+
+        const nivoContainer = elements.nivoChartContainer;
+        ReactDOM.unmountComponentAtNode(nivoContainer);
+        nivoContainer.innerHTML = '';
+
+        const chartContainerStyle = getComputedStyle(nivoContainer);
+        const chartHeight = parseInt(chartContainerStyle.height) || 650;
+
+        const singleChartHeight = chartHeight - 20;
+        const splitChartHeight = Math.floor(chartHeight / 2) - 10;
+
+
+        const theme = {
+            textColor: 'var(--text-primary)',
+            fontSize: 11,
+            axis: {
+                domain: { line: { stroke: 'var(--border)', strokeWidth: 1 } },
+                ticks: { line: { stroke: 'var(--border)', strokeWidth: 1 }, text: { fill: 'var(--text-secondary)', fontSize: 10 } },
+                legend: { text: { fill: 'var(--text-primary)', fontSize: 12, fontWeight: 500 } }
+            },
+            grid: { line: { stroke: 'var(--border)', strokeWidth: 0.5, strokeDasharray: '4 4' } },
+            legends: {
+                text: { fill: 'var(--text-primary)', fontSize: 11 }
+            },
+            tooltip: {
+                container: {
+                    background: 'var(--card-background)',
+                    color: 'var(--text-primary)',
+                    fontSize: '12px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius)',
+                    boxShadow: '0 3px 6px rgba(0,0,0,0.1)',
                 },
-                scales: {
-                    x: { stacked: state.isStacked, ticks: { color: 'var(--text-secondary)' }, grid: { color: 'rgba(161, 170, 184, 0.2)' } },
-                    y: { stacked: state.isStacked, beginAtZero: true, ticks: { color: 'var(--text-secondary)' }, grid: { color: 'rgba(161, 170, 184, 0.2)' } }
+            },
+            labels: { text: { fill: 'var(--text-primary)' } },
+        };
+
+        const commonMargin = { top: 30, right: 100, bottom: 50, left: 50 };
+
+        const barChartProps = {
+            data: barData,
+            keys: barKeys,
+            indexBy: "slot",
+            groupMode: isStackedView ? 'stacked' : 'grouped',
+            margin: commonMargin,
+            padding: 0.2,
+            innerPadding: isStackedView ? 0 : 2,
+            valueScale: { type: 'linear' },
+            indexScale: { type: 'band', round: true },
+            colors: ({ id, data }) => {
+                const trafficType = TRAFFIC_TYPES.find(t => t.label === id);
+                return trafficType ? trafficType.color : '#ccc';
+            },
+            borderColor: { from: 'color', modifiers: [ [ 'darker', 0.6 ] ] },
+            axisBottom: {
+                tickSize: 5, tickPadding: 5, tickRotation: -45,
+                legend: (isCapacityActive && lineData.length > 0 && isStackedView) ? '' : 'Créneau Horaire',
+                legendPosition: 'middle', legendOffset: 40,
+                format: v => (parseInt(v.split(':')[1]) % 30 === 0 ? v : '')
+            },
+            axisLeft: {
+                tickSize: 5, tickPadding: 5, tickRotation: 0,
+                legend: 'Moy. Vols / Créneau', legendPosition: 'middle', legendOffset: -40
+            },
+            enableGridX: false,
+            enableGridY: true,
+            labelSkipWidth: 12,
+            labelSkipHeight: 12,
+            labelTextColor: { from: 'color', modifiers: [ [ 'darker', 2 ] ] },
+            legends: barKeys.length > 0 ? [
+                {
+                    dataFrom: 'keys', anchor: 'top-right', direction: 'column',
+                    itemWidth: 80, itemHeight: 18, itemsSpacing: 2,
+                    symbolSize: 10, itemDirection: 'left-to-right',
+                    translateX: 95, translateY: -25,
                 }
-            }
-        });
+            ] : [],
+            theme: theme,
+            animate: true,
+            motionConfig: "gentle",
+            tooltip: ({ id, value, indexValue, color }) => (
+                React.createElement('div', {
+                    style: {
+                        padding: '3px 6px',
+                        background: 'var(--card-background)',
+                        border: `1px solid ${color}`,
+                        color: 'var(--text-primary)',
+                        borderRadius: '3px'
+                    }
+                }, `${id}: ${value} à ${indexValue}`)
+            )
+        };
+
+        if (isCapacityActive && lineData.length > 0 && NivoLine) {
+            const barDiv = document.createElement('div');
+            barDiv.style.height = `${splitChartHeight}px`;
+            barDiv.style.width = '100%';
+            nivoContainer.appendChild(barDiv);
+            ReactDOM.render(React.createElement(NivoBar.ResponsiveBar, barChartProps), barDiv);
+
+            const lineDiv = document.createElement('div');
+            lineDiv.style.height = `${splitChartHeight}px`;
+            lineDiv.style.width = '100%';
+            nivoContainer.appendChild(lineDiv);
+
+            const lineChartProps = {
+                data: lineData,
+                margin: commonMargin,
+                xScale: { type: 'point' },
+                yScale: { type: 'linear', min: 0, max: 'auto', stacked: false, reverse: false },
+                colors: ['var(--accent-orange)'],
+                lineWidth: 2,
+                enableArea: true,
+                areaOpacity: 0.15,
+                pointSize: 0,
+                useMesh: true,
+                axisBottom: {
+                    tickSize: 5, tickPadding: 5, tickRotation: -45,
+                    legend: 'Créneau Horaire', legendPosition: 'middle', legendOffset: 40,
+                    format: v => (parseInt(v.split(':')[1]) % 30 === 0 ? v : '')
+                },
+                axisLeft: {
+                    tickSize: 5, tickPadding: 5, tickRotation: 0,
+                    legend: 'Capacité', legendPosition: 'middle', legendOffset: -40
+                },
+                enableGridX: false,
+                enableGridY: true,
+                theme: theme,
+                animate: true,
+                motionConfig: "gentle",
+                tooltip: ({ point }) => (
+                     React.createElement('div', {
+                        style: {
+                            padding: '3px 6px',
+                            background: 'var(--card-background)',
+                            border: `1px solid ${point.serieColor}`,
+                            color: 'var(--text-primary)',
+                            borderRadius: '3px'
+                        }
+                    }, `${point.serieId}: ${point.data.yFormatted} à ${point.data.xFormatted}`)
+                ),
+            };
+            ReactDOM.render(React.createElement(NivoLine.ResponsiveLine, lineChartProps), lineDiv);
+
+        } else {
+            const barDiv = document.createElement('div');
+            barDiv.style.height = `${singleChartHeight}px`;
+            barDiv.style.width = '100%';
+            nivoContainer.appendChild(barDiv);
+            ReactDOM.render(React.createElement(NivoBar.ResponsiveBar, barChartProps), barDiv);
+        }
     }
 
     function updateSummaryCards(data) {
@@ -551,7 +765,6 @@ document.addEventListener('DOMContentLoaded', () => {
             parseFloat(elements.avgTma.textContent)
         ).toFixed(1);
 
-    // Min/Max calculation for Dep/Arr/TMA
     const slotAggregates = {};
     data.forEach(flight => {
         const key = `${flight.date.toISOString().slice(0,10)}_${flight.timeSlot}`;
@@ -575,8 +788,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (item[prop] > maxVal) { maxVal = item[prop]; maxItem = item; }
         });
 
-        if (minItem && maxItem) { // Ensure items were found
+        if (minItem && maxItem) {
              return `${minVal.toFixed(0)} (${minItem.date.toLocaleDateString()} ${minItem.slot}) / ${maxVal.toFixed(0)} (${maxItem.date.toLocaleDateString()} ${maxItem.slot})`;
+        } else if (maxItem) {
+             return `0 / ${maxVal.toFixed(0)} (${maxItem.date.toLocaleDateString()} ${maxItem.slot})`;
+        } else if (minItem) {
+             return `${minVal.toFixed(0)} (${minItem.date.toLocaleDateString()} ${minItem.slot}) / 0`;
         }
         return "N/A";
     };
@@ -586,7 +803,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.tmaMinMaxDate) elements.tmaMinMaxDate.textContent = findMinMaxText('tma');
 }
 
-// New function for Capacity & Agents Min/Max
 function updateCapacityAgentMinMaxStats(capacityResult) {
     if (!capacityResult || !elements.capacityMinMaxDate || !elements.agentsMinMaxDate) {
         if(elements.capacityMinMaxDate) elements.capacityMinMaxDate.textContent = "N/A";
@@ -610,13 +826,13 @@ function updateCapacityAgentMinMaxStats(capacityResult) {
             if (val > maxVal) { maxVal = val; maxSlot = arrSlots[idx]; }
         });
 
-        if (minSlot === "" && maxSlot === "" && arr.length > 0) { // Handle case where all values are the same
+        if (minSlot === "" && maxSlot === "" && arr.length > 0) {
             minVal = arr[0]; maxVal = arr[0]; minSlot = arrSlots[0]; maxSlot = arrSlots[0];
-        } else if (minSlot === "" && maxSlot === "") { // Truly empty or all non-numeric
+        } else if (minSlot === "" && maxSlot === "") {
              return "N/A";
         }
 
-        const refDateStr = state.currentStartDate ? state.currentStartDate.toLocaleDateString() : "N/A";
+        const refDateStr = state.currentStartDate && !isNaN(state.currentStartDate.getTime()) ? state.currentStartDate.toLocaleDateString() : "N/A";
         return `${minVal.toFixed(0)} (${refDateStr} ${minSlot}) / ${maxVal.toFixed(0)} (${refDateStr} ${maxSlot})`;
     };
 
@@ -630,10 +846,26 @@ function updateCapacityAgentMinMaxStats(capacityResult) {
             if (activeDays.includes(i)) {
                 const daysOfType = data.filter(d => (d.datetime.getDay() + 6) % 7 === i);
                 const numDaysOfType = new Set(daysOfType.map(d => d.date.toDateString())).size || 1;
-                const totals = daysOfType.reduce((acc, d) => { acc.isDeparture += d.isDeparture; acc.isArrival += d.isArrival; return acc; }, { isDeparture: 0, isArrival: 0, tma: 0 });
-                const tmaTracker = new Set();
-                daysOfType.forEach(d => { if (d.tma > 0 && !tmaTracker.has(`${d.date.toDateString()}-${d.timeSlot}`)) { totals.tma += d.tma; tmaTracker.add(`${d.date.toDateString()}-${d.timeSlot}`); } });
-                dailyAggregates.set(i, { 'Départs': totals.isDeparture / numDaysOfType, 'Arrivées': totals.isArrival / numDaysOfType, 'TMA': totals.tma / numDaysOfType, 'Total': (totals.isDeparture + totals.isArrival + totals.tma) / numDaysOfType });
+                const totals = daysOfType.reduce((acc, d) => { acc.isDeparture += d.isDeparture; acc.isArrival += d.isArrival; return acc; }, { isDeparture: 0, isArrival: 0 });
+
+                let dayTotalTma = 0;
+                const dayHourlyTmaTracker = new Set();
+                daysOfType.forEach(d => {
+                    if (d.tma > 0) {
+                        const dateHourKey = `${d.date.toDateString()}-${d.datetime.getHours()}:00`;
+                        if (!dayHourlyTmaTracker.has(dateHourKey)) {
+                            dayTotalTma += d.tma;
+                            dayHourlyTmaTracker.add(dateHourKey);
+                        }
+                    }
+                });
+
+                dailyAggregates.set(i, {
+                    'Départs': totals.isDeparture / numDaysOfType,
+                    'Arrivées': totals.isArrival / numDaysOfType,
+                    'TMA': dayTotalTma / numDaysOfType,
+                    'Total': (totals.isDeparture + totals.isArrival + dayTotalTma) / numDaysOfType
+                });
             }
         }
         
@@ -641,21 +873,21 @@ function updateCapacityAgentMinMaxStats(capacityResult) {
         const metrics = ['Départs', 'Arrivées', 'TMA', 'Total'];
         metrics.forEach(metric => {
             const values = activeDays.map(dayIndex => dailyAggregates.get(dayIndex)?.[metric] || 0);
-            maxValues[metric] = d3.max(values);
+            maxValues[metric] = d3.max(values) || 0;
         });
         
         const allValues = [...dailyAggregates.values()].flatMap(day => Object.values(day));
         const colorScale = d3.scaleLinear().domain([0, d3.max(allValues) || 1])
             .range(['rgba(36, 40, 59, 0.1)', 'rgba(255, 158, 100, 0.6)']);
 
-        elements.summaryTableHead.innerHTML = `<tr><th></th>${activeDays.map(i => `<th>${DAYS_OF_WEEK[i]}</th>`).join('')}</tr>`; // "Métrique" removed
+        elements.summaryTableHead.innerHTML = `<tr><th></th>${activeDays.map(i => `<th>${DAYS_OF_WEEK[i]}</th>`).join('')}</tr>`;
         elements.summaryTableBody.innerHTML = '';
         
         metrics.forEach(metric => {
             let rowHtml = `<tr><td>${metric}</td>`;
             activeDays.forEach(dayIndex => {
                 const dayData = dailyAggregates.get(dayIndex);
-                const value = dayData ? dayData[metric] : 0;
+                const value = dayData && dayData[metric] !== undefined ? dayData[metric] : 0;
                 const color = colorScale(value);
                 const isMax = value > 0 && Math.abs(value - maxValues[metric]) < 0.01;
                 const className = isMax ? 'max-value' : '';
