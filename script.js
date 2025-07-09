@@ -522,18 +522,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSummaryCards(data) {
         const numDays = new Set(data.map(d => d.date.toDateString())).size || 1;
-        const totals = data.reduce((acc, d) => { acc.isArrival += d.isArrival; acc.isDeparture += d.isDeparture; return acc; }, { isArrival: 0, isDeparture: 0, tma: 0 });
-        const tmaTracker = new Set();
-        data.forEach(d => { if (d.tma > 0 && !tmaTracker.has(`${d.date.toDateString()}-${d.timeSlot}`)) { totals.tma += d.tma; tmaTracker.add(`${d.date.toDateString()}-${d.timeSlot}`); } });
-        const getAvg = (key) => (totals[key] / numDays).toFixed(1);
-    elements.avgDep.textContent = getAvg(totals.isDeparture);
-    elements.avgArr.textContent = getAvg(totals.isArrival);
-    elements.avgTma.textContent = getAvg(totalTma);
-    elements.avgTotal.textContent = (
-        parseFloat(elements.avgDep.textContent) +
-        parseFloat(elements.avgArr.textContent) +
-        parseFloat(elements.avgTma.textContent)
-    ).toFixed(1);
+        const totals = data.reduce((acc, d) => {
+            acc.isArrival += d.isArrival;
+            acc.isDeparture += d.isDeparture;
+            return acc;
+        }, { isArrival: 0, isDeparture: 0 });
+
+        let totalTmaForAvg = 0;
+        const hourlyTmaTracker = new Set();
+        data.forEach(d => {
+            if (d.tma > 0) {
+                const dateHourKey = `${d.date.toDateString()}-${d.datetime.getHours()}:00`;
+                if (!hourlyTmaTracker.has(dateHourKey)) {
+                    totalTmaForAvg += d.tma;
+                    hourlyTmaTracker.add(dateHourKey);
+                }
+            }
+        });
+
+        const getAvg = (value) => (value / numDays).toFixed(1);
+
+        elements.avgDep.textContent = getAvg(totals.isDeparture);
+        elements.avgArr.textContent = getAvg(totals.isArrival);
+        elements.avgTma.textContent = getAvg(totalTmaForAvg);
+        elements.avgTotal.textContent = (
+            parseFloat(elements.avgDep.textContent) +
+            parseFloat(elements.avgArr.textContent) +
+            parseFloat(elements.avgTma.textContent)
+        ).toFixed(1);
 
     // Min/Max calculation for Dep/Arr/TMA
     const slotAggregates = {};
