@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aiglon Futé - Dashboard Avancé</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+    <div class="main-wrapper">
+        <div class="container">
+            <header>
+                <h1 class="main-title">AIGLON FUTÉ</h1>
+                <p>Dashboard d'analyse des données COHOR</p>
+            </header>
+
+            <main>
+                <div class="card">
+                    <h2 class="card-title">Fichiers de Données</h2>
+                    <div class="controls-row">
+                        <div class="upload-section">
+                            <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+                            <button onclick="document.getElementById('csvFileInput').click()" class="button">
+                                Charger Fichier COHOR (.csv)
+                            </button>
+                            <p id="csvFileName" class="file-name-display">Aucun fichier</p>
+                        </div>
+                        <div class="upload-section">
+                            <input type="file" id="jsonFileInput" accept=".json" style="display: none;">
+                            <button onclick="document.getElementById('jsonFileInput').click()" class="button">
+                                Charger Fichier TMA (.json)
+                            </button>
+                            <p id="jsonFileName" class="file-name-display">Aucun fichier</p>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">Filtres Interactifs</h2>
+                    <div class="date-controls-container">
+                        <div class="date-inputs">
+                            <label for="dateStartInput">Début:</label>
+                            <input type="date" id="dateStartInput" disabled>
+                            <label for="dateEndInput">Fin:</label>
+                            <input type="date" id="dateEndInput" disabled>
+                        </div>
+                        <div id="date-slider-container"></div>
+                    </div>
+                    <div class="toggles-container">
+                        <div class="filter-group-vertical">
+                            <label for="periodSelect">Période</label>
+                            <select id="periodSelect" class="select-dropdown">
+                                <option value="Hiv">Hiver</option>
+                                <option value="Cha" selected>Chargée</option>
+                                <option value="Cre">Creuse</option>
+                            </select>
+                        </div>
+                        <div class="filter-group-vertical">
+                            <label>Jours de la semaine</label>
+                            <div id="dayOfWeekToggles" class="toggle-group"></div>
+                        </div>
+                        <div class="filter-group-vertical">
+                            <label>Types de trafic</label>
+                            <div id="trafficTypeToggles" class="toggle-group"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="dashboardContent" class="hidden">
+                    <!-- ... le reste du contenu reste identique ... -->
+                    <div class="stats-grid">
+                        <div class="card stat-card">
+                            <h3 class="stat-title">Départs / jour</h3>
+                            <p id="avgDep" class="stat-value">0</p>
+                        </div>
+                        <div class="card stat-card">
+                            <h3 class="stat-title">Arrivées / jour</h3>
+                            <p id="avgArr" class="stat-value">0</p>
+                        </div>
+                        <div class="card stat-card">
+                            <h3 class="stat-title">TMA / jour</h3>
+                            <p id="avgTma" class="stat-value">0</p>
+                        </div>
+                        <div class="card stat-card">
+                            <h3 class="stat-title">Total / jour (moy.)</h3>
+                            <p id="avgTotal" class="stat-value">0</p>
+                        </div>
+                        <div class="card stat-card">
+                            <h3 class="stat-title">Départs (Min/Max)</h3>
+                            <p id="depMinMaxDate" class="stat-value-small">N/A</p>
+                        </div>
+                        <div class="card stat-card">
+                            <h3 class="stat-title">Arrivées (Min/Max)</h3>
+                            <p id="arrMinMaxDate" class="stat-value-small">N/A</p>
+                        </div>
+                        <div class="card stat-card">
+                            <h3 class="stat-title">TMA (Min/Max)</h3>
+                            <p id="tmaMinMaxDate" class="stat-value-small">N/A</p>
+                        </div>
+                        <div class="card stat-card">
+                            <h3 class="stat-title">Capacité (Min/Max)</h3>
+                            <p id="capacityMinMaxDate" class="stat-value-small">N/A</p>
+                        </div>
+                        <div class="card stat-card">
+                            <h3 class="stat-title">Agents (Min/Max)</h3>
+                            <p id="agentsMinMaxDate" class="stat-value-small">N/A</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="chart-header">
+                            <h2 class="card-title">Trafic moyen par créneau horaire</h2>
+                             <button id="toggleChartTypeBtn" class="button-secondary">Vue Côte à Côte</button>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="trafficChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div id="capacityControlsCard" class="card hidden">
+                        <h2 class="card-title">Contrôles de Capacité</h2>
+                        <div class="capacity-controls-grid">
+                            <div class="control-group">
+                                <label>Effectif par vacation</label>
+                                <div class="vacation-controls">
+                                    <div class="filter-group-horizontal">
+                                        <label>Vacations Je</label>
+                                        <div id="vacationTogglesJe" class="toggle-group"></div>
+                                    </div>
+                                    <div class="filter-group-horizontal">
+                                        <label>Vacations M</label>
+                                        <div id="vacationTogglesM" class="toggle-group"></div>
+                                    </div>
+                                    <div class="filter-group-horizontal">
+                                        <label>Vacations J</label>
+                                        <div id="vacationTogglesJ" class="toggle-group"></div>
+                                    </div>
+                                    <div class="filter-group-horizontal">
+                                        <label>Vacations S/N</label>
+                                        <div id="vacationTogglesSN" class="toggle-group"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label for="staffMatin">Staff Matin (06h-14h):</label>
+                                <input type="number" id="staffMatin" value="3" min="0" max="10">
+                            </div>
+                            <div class="control-group">
+                                <label for="staffJour">Staff Jour (14h-22h):</label>
+                                <input type="number" id="staffJour" value="8" min="0" max="10">
+                            </div>
+                            <div class="control-group">
+                                <label for="staffNuit">Staff Nuit (22h-06h):</label>
+                                <input type="number" id="staffNuit" value="8" min="0" max="10">
+                            </div>
+                            <div class="control-group">
+                                <label for="sivSlider">Réduction SIV: <span id="sivValue">0</span>%</label>
+                                <input type="range" id="sivSlider" min="0" max="100" value="0">
+                            </div>
+                            <div class="control-group">
+                                <label for="sivSelect">Hypothèse SIV</label>
+                                <select id="sivSelect" class="select-dropdown">
+                                    <option value="VFR faible">Faible</option>
+                                    <option value="VFR moyen">Moyen</option>
+                                    <option value="VFR fort" selected>Fort</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h2 class="card-title">Synthèse</h2>
+                         <div class="table-container">
+                            <table id="summaryTable">
+                                <thead></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="initialMessage" class="card">
+                    <p>Veuillez charger un fichier COHOR pour commencer...</p>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script src="staffingMap.js"></script>
+    <script src="sivRules.js"></script>
+    <script src="vacationGrids.js"></script>
+    <script src="CapacityCalculator.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
