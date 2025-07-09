@@ -52,6 +52,29 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // --- Initialization Functions ---
+    let cohorDataLoaded = false;
+    let tmaDataLoaded = false;
+
+    function attemptInitializeDashboard() {
+        if (cohorDataLoaded && tmaDataLoaded) {
+            if (state.cohorData.length > 0 && state.tmaMap.size > 0) {
+                console.log("Both COHOR and TMA data ready. Initializing dashboard.");
+                initializeDashboard();
+            } else {
+                console.warn("Dashboard initialization skipped: COHOR data or TMA data missing/empty after loading attempts.");
+                if (state.cohorData.length === 0 && cohorDataLoaded) {
+                    // Alert/message is handled by handleCohorFile
+                }
+                if (state.tmaMap.size === 0 && tmaDataLoaded) {
+                    if (elements.initialMsg && !elements.initialMsg.textContent.includes("Erreur")) {
+                        elements.initialMsg.innerHTML = `<p style="color: orange;">Données TMA non disponibles ou vides. Certaines fonctionnalités peuvent être limitées.</p>`;
+                        elements.initialMsg.classList.remove('hidden'); // Ensure message is visible
+                    }
+                }
+            }
+        }
+    }
+
     function initializeCapacityCalculator() {
         if (state.grilleVacations && typeof state.grilleVacations === 'object' && Object.keys(state.grilleVacations).length > 0 &&
             state.compoEquipe && typeof state.compoEquipe === 'object' && Object.keys(state.compoEquipe).length > 0 &&
@@ -79,67 +102,80 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Event Listeners ---
     elements.csvFile.addEventListener('change', handleCohorFile);
-    // elements.jsonFile.addEventListener('change', handleTmaFile); // Removed, TMA loaded by default
-    // elements.grilleFile.addEventListener('change', handleGrilleFile); // No longer needed
-    // elements.compoFile.addEventListener('change', handleCompoFile); // No longer needed
     elements.toggleChartBtn.addEventListener('click', toggleChartStacking);
     [elements.dateStartInput, elements.dateEndInput].forEach(el => el.addEventListener('change', updateFromDateInputs));
-    // staffMatin, staffJour, staffNuit are no longer primary drivers for the new capacity calculation.
-    // sivSlider is also not directly used by the new calculator (sivSelect is).
-    // Keep listeners for now, but their direct effect on capacity chart via these specific inputs will change.
     [elements.staffMatin, elements.staffJour, elements.staffNuit, elements.sivSlider, elements.periodSelect, elements.sivSelect].forEach(el => {
-        if (el) el.addEventListener('input', () => updateDashboard(false)); // Added periodSelect and sivSelect
+        if (el) el.addEventListener('input', () => updateDashboard(false));
     });
 
-    initializeCapacityCalculator(); // Initialize after global scripts are loaded.
-    loadDefaultTmaData(); // Load default TMA data
+    initializeCapacityCalculator();
+    loadDefaultTmaData();
 
-    //          alert("Aucune donnée prévisionnelle trouvée dans le fichier COHOR. Vérifiez le format du fichier.");
+    function handleCohorFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (elements.csvName) elements.csvName.textContent = file.name;
+        cohorDataLoaded = false;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                state.cohorData = processCohorCSV(e.target.result);
+                if (state.cohorData.length === 0) {
+                    alert("Aucune donnée prévisionnelle trouvée ou traitée dans le fichier COHOR. Vérifiez le format du fichier.");
+                    if (elements.csvName) elements.csvName.textContent = "Erreur fichier ou données";
+                }
+            } catch (error) {
+                console.error("Error processing COHOR CSV:", error);
+                alert(`Erreur lors du traitement du fichier COHOR: ${error.message}`);
+                if (elements.csvName) elements.csvName.textContent = "Erreur de traitement";
+                state.cohorData = [];
+            } finally {
+                cohorDataLoaded = true;
+                attemptInitializeDashboard();
             }
+        };
+        reader.onerror = () => {
+            console.error("FileReader error for COHOR CSV.");
+            alert("Erreur de lecture du fichier COHOR.");
+            if (elements.csvName) elements.csvName.textContent = "Erreur de lecture";
+            state.cohorData = [];
+            cohorDataLoaded = true;
+            attemptInitializeDashboard();
         };
         reader.readAsText(file, 'UTF-8');
     }
 
-    // function handleTmaFile(event) { ... } // Removed - TMA is loaded by default
-
     async function loadDefaultTmaData() {
+        tmaDataLoaded = false;
         try {
-            const response = await fetch('2024_TMA_horaire_60min.json'); // Path to default TMA JSON
+            const response = await fetch('2024_TMA_horaire_60min.json');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const tmaJsonText = await response.text();
             state.tmaMap = processTmaJSON(tmaJsonText);
-            console.log("Default TMA data processed successfully.");
-
-            // If COHOR data is already loaded, update the dashboard
-            if (state.cohorData.length > 0) {
-                combineAllData();
-                // Check if fullDateRange is set, otherwise initializeDashboard might need to be called first
-                if(state.fullDateRange && state.fullDateRange.length > 0){
-                    updateDashboard();
-                } else {
-                    // This case implies COHOR was loaded but dashboard not yet initialized
-                    // This might happen if COHOR loaded extremely fast before TMA.
-                    // initializeDashboard() will call combineAllData and updateDashboard again.
-                    // For safety, ensure initializeDashboard is robust or called after both are ready.
-                    // For now, assume handleCohorFile will call initializeDashboard if it's the first data load.
-                }
+            if (state.tmaMap.size === 0) {
+                 console.warn("Default TMA data processed but resulted in an empty map.");
+            } else {
+                console.log("Default TMA data processed successfully.");
             }
         } catch (error) {
             console.error("Could not load or process default TMA data:", error);
-            if (elements.initialMsg) { // Check if elements.initialMsg is available
-                elements.initialMsg.innerHTML = `<p style="color: red;">Erreur: Impossible de charger les données TMA nécessaires. Veuillez vérifier la console.</p>`;
-                elements.initialMsg.classList.remove('hidden');
+            state.tmaMap = new Map();
+            if (elements.initialMsg) {
+                elements.initialMsg.innerHTML = `<p style="color: red;">Erreur: Impossible de charger les données TMA (${error.message}). Certaines fonctionnalités seront affectées.</p>`;
+                if (elements.initialMsg.classList.contains('hidden')) {
+                     elements.initialMsg.classList.remove('hidden');
+                }
             } else {
-                 alert("Erreur: Impossible de charger les données TMA nécessaires. L'application pourrait ne pas fonctionner correctement.");
+                 alert(`Erreur: Impossible de charger les données TMA (${error.message}). L'application pourrait ne pas fonctionner correctement.`);
             }
-            // Disable COHOR upload if TMA fails? Or allow COHOR and just have no TMA?
-            // For now, let it proceed, TMA features will just be missing.
+        } finally {
+            tmaDataLoaded = true;
+            attemptInitializeDashboard();
         }
     }
-
-    // Removed handleGrilleFile and handleCompoFile as data is now global
 
     function initializeDashboard() {
         elements.initialMsg.classList.add('hidden');
