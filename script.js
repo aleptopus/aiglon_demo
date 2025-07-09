@@ -305,18 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const containerWidth = elements.dateSliderContainer.clientWidth;
         if (containerWidth === 0) return; // Don't draw if not visible
         const margin = { right: 20, left: 20 };
-        const width = contuttons() {
-        elements.dayToggles.innerHTML = DAYS_OF_WEEK.map((day, i) => `<input type="checkbox" id="day-${i}" value="${i}" checked><label for="day-${i}">${day.substring(0,3)}</label>`).join('');
-        elements.trafficToggles.innerHTML = TRAFFIC_TYPES.map((type) => `<input type="checkbox" id="type-${type.key}" value="${type.key}" checked><label for="type-${type.key}">${type.label}</label>`).join('');
-        document.querySelectorAll('.toggle-group input').forEach(cb => cb.addEventListener('change', updateDashboard));
-    }
-
-    function createDateSlider() {
-        const [minDate, maxDate] = state.fallDaieRange;
-        consn certainerWidth = elementW.dateSliderContainer.clientWidth;
-        if icontainerWidth === 0d return; // Don't draw if not visible
-        const margin =th right: 20, left: 20 };
-        const width = containerWidth - margin.left - margin.right; - margin.left - margin.right;
+        const width = containerWidth - margin.left - margin.right;
         
         elements.dateSliderContainer.innerHTML = '';
         const svg = d3.select(elements.dateSliderContainer).append("svg").attr("width", containerWidth).attr("height", 50);
