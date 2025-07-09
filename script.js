@@ -2,16 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements & State ---
     const elements = {
         csvFile: document.getElementById('csvFileInput'),
-        jsonFile: document.getElementById('jsonFileInput'),
-        grilleFile: document.getElementById('grilleFileInput'),
-        compoFile: document.getElementById('compoFileInput'),
         csvName: document.getElementById('csvFileName'),
-        jsonName: document.getElementById('jsonFileName'),
-        grilleName: document.getElementById('grilleFileName'),
-        compoName: document.getElementById('compoFileName'),
-        jsonButton: document.querySelector('button[onclick*="jsonFileInput"]'),
-        grilleButton: document.querySelector('button[onclick*="grilleFileInput"]'),
-        compoButton: document.querySelector('button[onclick*="compoFileInput"]'),
+        // References to jsonFile, grilleFile, compoFile and their displays/buttons removed as data is bundled or default.
         initialMsg: document.getElementById('initialMessage'),
         dashboard: document.getElementById('dashboardContent'),
         dateStartInput: document.getElementById('dateStartInput'),
@@ -23,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         avgArr: document.getElementById('avgArr'),
         avgTma: document.getElementById('avgTma'),
         avgTotal: document.getElementById('avgTotal'),
+        trafficChartTitle: document.getElementById('trafficChartTitle'), // Added for dynamic title
         chartCanvas: document.getElementById('trafficChart').getContext('2d'),
         toggleChartBtn: document.getElementById('toggleChartTypeBtn'),
         summaryTableHead: document.querySelector('#summaryTable thead'),
@@ -33,8 +26,14 @@ document.addEventListener('DOMContentLoaded', () => {
         staffNuit: document.getElementById('staffNuit'),
         sivSlider: document.getElementById('sivSlider'),
         sivValue: document.getElementById('sivValue'),
-        periodSelect: document.getElementById('periodSelect'), // New: Period select
-        sivSelect: document.getElementById('sivSelect'),       // New: SIV select
+        periodSelect: document.getElementById('periodSelect'),
+        sivSelect: document.getElementById('sivSelect'),
+        // Min/Max stat display elements
+        depMinMaxDate: document.getElementById('depMinMaxDate'),
+        arrMinMaxDate: document.getElementById('arrMinMaxDate'),
+        tmaMinMaxDate: document.getElementById('tmaMinMaxDate'),
+        capacityMinMaxDate: document.getElementById('capacityMinMaxDate'),
+        agentsMinMaxDate: document.getElementById('agentsMinMaxDate'),
     };
 
     let state = {
@@ -49,8 +48,27 @@ document.addEventListener('DOMContentLoaded', () => {
         isStacked: true,
         trafficChart: null,
         windowDurationMs: 0,
+        capacityCalculatorInstance: null, // Added for CapacityCalculator
     };
     
+    // --- Initialization Functions ---
+    function initializeCapacityCalculator() {
+        if (state.grilleVacations && typeof state.grilleVacations === 'object' && Object.keys(state.grilleVacations).length > 0 &&
+            state.compoEquipe && typeof state.compoEquipe === 'object' && Object.keys(state.compoEquipe).length > 0 &&
+            sivRules && typeof sivRules === 'object' && Object.keys(sivRules).length > 0) {
+
+            state.capacityCalculatorInstance = new CapacityCalculator(
+                state.compoEquipe, // This is staffingMap from staffingMap.js
+                sivRules,          // This is sivRules from sivRules.js
+                state.grilleVacations // This is vacationGrids from vacationGrids.js
+            );
+            console.log("CapacityCalculator initialized successfully.");
+        } else {
+            console.warn("CapacityCalculator could not be initialized due to missing critical data (staffingMap, sivRules, or vacationGrids).");
+            // Optionally, disable capacity-related UI features if initialization fails
+        }
+    }
+
     // --- Constants ---
     const DAYS_OF_WEEK = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
     const TRAFFIC_TYPES = [
@@ -61,12 +79,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Event Listeners ---
     elements.csvFile.addEventListener('change', handleCohorFile);
-    elements.jsonFile.addEventListener('change', handleTmaFile);
+    // elements.jsonFile.addEventListener('change', handleTmaFile); // Removed, TMA loaded by default
     // elements.grilleFile.addEventListener('change', handleGrilleFile); // No longer needed
     // elements.compoFile.addEventListener('change', handleCompoFile); // No longer needed
     elements.toggleChartBtn.addEventListener('click', toggleChartStacking);
     [elements.dateStartInput, elements.dateEndInput].forEach(el => el.addEventListener('change', updateFromDateInputs));
-    [elements.staffMatin, elements.staffJour, elements.staffNuit, elements.sivSlider].forEach(el => el.addEventListener('input', () => updateDashboard(false)));
+    // staffMatin, staffJour, staffNuit are no longer primary drivers for the new capacity calculation.
+    // sivSlider is also not directly used by the new calculator (sivSelect is).
+    // Keep listeners for now, but their direct effect on capacity chart via these specific inputs will change.
+    [elements.staffMatin, elements.staffJour, elements.staffNuit, elements.sivSlider, elements.periodSelect, elements.sivSelect].forEach(el => {
+        if (el) el.addEventListener('input', () => updateDashboard(false)); // Added periodSelect and sivSelect
+    });
+
+    initializeCapacityCalculator(); // Initialize after global scripts are loaded.
+    loadDefaultTmaData(); // Load default TMA data
 
     //          alert("Aucune donnée prévisionnelle trouvée dans le fichier COHOR. Vérifiez le format du fichier.");
             }
@@ -74,17 +100,43 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsText(file, 'UTF-8');
     }
 
-    function handleTmaFile(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        elements.jsonName.textContent = file.name;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            state.tmaMap = processTmaJSON(e.target.result);
-            combineAllData();
-            updateDashboard();
-        };
-        reader.readAsText(file, 'UTF-8');
+    // function handleTmaFile(event) { ... } // Removed - TMA is loaded by default
+
+    async function loadDefaultTmaData() {
+        try {
+            const response = await fetch('2024_TMA_horaire_60min.json'); // Path to default TMA JSON
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const tmaJsonText = await response.text();
+            state.tmaMap = processTmaJSON(tmaJsonText);
+            console.log("Default TMA data processed successfully.");
+
+            // If COHOR data is already loaded, update the dashboard
+            if (state.cohorData.length > 0) {
+                combineAllData();
+                // Check if fullDateRange is set, otherwise initializeDashboard might need to be called first
+                if(state.fullDateRange && state.fullDateRange.length > 0){
+                    updateDashboard();
+                } else {
+                    // This case implies COHOR was loaded but dashboard not yet initialized
+                    // This might happen if COHOR loaded extremely fast before TMA.
+                    // initializeDashboard() will call combineAllData and updateDashboard again.
+                    // For safety, ensure initializeDashboard is robust or called after both are ready.
+                    // For now, assume handleCohorFile will call initializeDashboard if it's the first data load.
+                }
+            }
+        } catch (error) {
+            console.error("Could not load or process default TMA data:", error);
+            if (elements.initialMsg) { // Check if elements.initialMsg is available
+                elements.initialMsg.innerHTML = `<p style="color: red;">Erreur: Impossible de charger les données TMA nécessaires. Veuillez vérifier la console.</p>`;
+                elements.initialMsg.classList.remove('hidden');
+            } else {
+                 alert("Erreur: Impossible de charger les données TMA nécessaires. L'application pourrait ne pas fonctionner correctement.");
+            }
+            // Disable COHOR upload if TMA fails? Or allow COHOR and just have no TMA?
+            // For now, let it proceed, TMA features will just be missing.
+        }
     }
 
     // Removed handleGrilleFile and handleCompoFile as data is now global
@@ -92,11 +144,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeDashboard() {
         elements.initialMsg.classList.add('hidden');
         elements.dashboard.classList.remove('hidden');
-        elements.jsonButton.disabled = false;
+        // elements.jsonButton.disabled = false; // Removed
         // elements.grilleButton.disabled = false; // No longer needed
         [elements.dateStartInput, elements.dateEndInput].forEach(el => el.disabled = false);
 
-        combineAllData();
+        combineAllData(); // This must run after both cohorData and tmaMap are populated.
         const dates = [...new Set(state.combinedData.map(d => d.date.getTime()))].sort();
         state.fullDateRange = [new Date(dates[0]), new Date(dates[dates.length - 1])];
         
@@ -177,8 +229,14 @@ document.addEventListener('DOMContentLoaded', () => {
         state.combinedData = state.cohorData.map(flight => {
             const month = flight.datetime.getMonth() + 1;
             const dayType = getDayType(flight.datetime);
-            const tmaKey = `${month}-${dayType}-${flight.timeSlot}`;
-            const tmaValue = state.tmaMap.get(tmaKey) || 0;
+        // TMA data is hourly. Get the HH:00 slot for the flight's datetime.
+        const flightHourSlot = `${String(flight.datetime.getHours()).padStart(2, '0')}:00`;
+        const tmaKey = `${month}-${dayType}-${flightHourSlot}`;
+        const tmaValue = state.tmaMap.get(tmaKey) || 0; // Get the hourly TMA value
+
+        // Assign this hourly TMA value to the flight.
+        // In updateMainChart, the tmaTracker logic will ensure this hourly value is
+        // attributed once per 15-min slot if there's activity in that slot.
             return { ...flight, tma: tmaValue };
         });
     }
@@ -261,22 +319,42 @@ document.addEventListener('DOMContentLoaded', () => {
         if (redrawSlider) createDateSlider();
 
         const activeDays = [...elements.dayToggles.querySelectorAll('input:checked')].map(cb => parseInt(cb.value));
+
+        // Implement 06h to 06h filtering logic
+        let filterStartDateTime = null;
+        let filterEndDateTime = null;
+
+        if (state.currentStartDate && state.currentEndDate) {
+            filterStartDateTime = new Date(state.currentStartDate);
+            filterStartDateTime.setHours(6, 0, 0, 0); // Start date at 06:00 local
+
+            filterEndDateTime = new Date(state.currentEndDate);
+            // End date is inclusive for user selection, so target flights up to 05:59:59 on the day AFTER currentEndDate.
+            // Thus, the exclusive boundary is 06:00 on (currentEndDate + 1 day).
+            filterEndDateTime.setDate(filterEndDateTime.getDate() + 1);
+            filterEndDateTime.setHours(6, 0, 0, 0);
+        }
+
         const filtered = state.combinedData.filter(d => {
-            const dayOfWeek = (d.datetime.getDay() + 6) % 7;
-            return d.date >= state.currentStartDate && d.date <= state.currentEndDate && activeDays.includes(dayOfWeek);
+            const dayOfWeek = (d.datetime.getDay() + 6) % 7; // d.datetime is local
+            let includeByDate = true;
+            if (filterStartDateTime && filterEndDateTime) {
+                includeByDate = d.datetime >= filterStartDateTime && d.datetime < filterEndDateTime;
+            }
+            return includeByDate && activeDays.includes(dayOfWeek);
         });
         
-        // const isSingleDay = state.currentStartDate.toDateString() === state.currentEndDate.toDateString(); // Removed as per user request
-        const hasCapacityData = state.grilleVacations.length > 0 && Object.keys(state.compoEquipe).length > 0;
+        const hasCapacityData = state.capacityCalculatorInstance !== null;
 
-        if (hasCapacityData) { // Capacity should always be shown if data is available
+        if (hasCapacityData && state.isStacked) {
             elements.capacityControlsCard.classList.remove('hidden');
         } else {
+            // Hide capacity controls if no data OR if not in stacked view
             elements.capacityControlsCard.classList.add('hidden');
         }
         
         updateSummaryCards(filtered);
-        updateMainChart(filtered, isSingleDay && hasCapacityData);
+        updateMainChart(filtered);
         updateSummaryTable(filtered, activeDays);
     }
     
@@ -286,45 +364,13 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDashboard(false);
     }
 
-    function calculateCapacity(date, staffing, sivPercentage) {
-        const dayOfWeek = DAYS_OF_WEEK[(date.getDay() + 6) % 7];
-        const dayType = ['Samedi', 'Dimanche'].includes(dayOfWeek) ? dayOfWeek.slice(0, 3) : 'Sem';
-        const period = 'Cha'; // This should be dynamic based on date, hardcoded for now
-
-        const grilleKey = `Vacs_${dayType}${period}`;
-        const grille = state.grilleVacations.find(g => g.name === grilleKey)?.grid;
-        if (!grille) return Array(96).fill(0);
-
-        const capacitySlots = Array(96).fill(0);
-        const agentProfiles = state.compoEquipe;
-
-        const staffCounts = {
-            'M': staffing.M,
-            'J': staffing.J,
-            'S': staffing.N, // Assuming N maps to S in the grid
-            'N': staffing.N
-        };
-
-        for (const vacationType in staffCounts) {
-            for (let i = 1; i <= staffCounts[vacationType]; i++) {
-                const agentKey = `${vacationType}${i}`;
-                const profileKey = agentProfiles[agentKey];
-                if (profileKey && grille[profileKey]) {
-                    grille[profileKey].forEach((val, index) => {
-                        if (val === 1) {
-                            capacitySlots[index] += 1;
-                        }
-                    });
-                }
-            }
-        }
-
-        const sivReduction = 1 - (sivPercentage / 100);
-        return capacitySlots.map(c => c * sivReduction);
-    }
+    // Old calculateCapacity function is removed as its logic is now in CapacityCalculator.js
     
-    function updateMainChart(data, showCapacity) { // showCapacity is now always true if hasCapacityData
+    function updateMainChart(data) {
         const numDays = new Set(data.map(d => d.date.toDateString())).size || 1;
+        if (elements.trafficChartTitle) {
+            elements.trafficChartTitle.textContent = `Trafic moyen par créneau horaire (${numDays} jour${numDays > 1 ? 's' : ''})`;
+        }
         const slotData = new Map();
         for (let h = 0; h < 24; h++) { for (let m = 0; m < 60; m += 15) { slotData.set(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`, { isArrival: 0, isDeparture: 0, tma: 0 }); } }
         const tmaTracker = new Set();
@@ -357,27 +403,44 @@ document.addEventListener('DOMContentLoaded', () => {
             type: 'bar',
         }));
 
-        // Capacity is now always shown if hasCapacityData is true
-        if (state.grilleVacations.length > 0 && Object.keys(state.compoEquipe).length > 0) {
-            elements.sivValue.textContent = `${elements.sivSlider.value}%`;
-            const staffing = {
-                M: parseInt(elements.staffMatin.value),
-                J: parseInt(elements.staffJour.value),
-                N: parseInt(elements.staffNuit.value),
-            };
-            const capacityData = calculateCapacity(state.currentStartDate, staffing, elements.sivSlider.value);
+        // Use new CapacityCalculator instance
+        if (state.capacityCalculatorInstance && state.currentStartDate) {
+            const sivHypothesis = elements.sivSelect.value;
+            const selectedPeriod = elements.periodSelect.value; // "Hiv", "Cha", "Cre"
             
-            datasets.push({
-                label: 'Capacité',
+            // The 'activeVacations' parameter is not used by the Python-ported logic in CapacityCalculator,
+            // as it selects profiles based on hardcoded rules (top 7 non-chef). Pass null.
+            const capacityResult = state.capacityCalculatorInstance.calculateDailyCapacity(
+                state.currentStartDate, // Date for which to calculate capacity
+                null,                   // activeVacations (not used by current logic)
+                sivHypothesis,
+                selectedPeriod          // Pass the user-selected period
+            );
+            const capacityData = capacityResult.capacities;
+            updateCapacityAgentMinMaxStats(capacityResult); // Call new function
+
+            // Update SIV display text if sivSlider is still used for display purposes
+            // elements.sivValue.textContent = `${elements.sivSlider.value}%`; // This might be misleading now
+
+            const capacityDataset = {
+                label: `Capacité (${selectedPeriod})`,
                 data: capacityData,
                 backgroundColor: 'rgba(0, 0, 0, 0.2)',
                 borderColor: 'rgba(0, 0, 0, 0.5)',
                 type: 'line',
                 fill: true,
                 pointRadius: 0,
-                order: -1 // Draw behind bars
-            });
+                order: -1, // Draw behind bars
+                hidden: !state.isStacked // Hide if not in stacked view
+            };
+            datasets.push(capacityDataset);
+        } else if (state.capacityCalculatorInstance && !state.isStacked) {
+            // Ensure capacity is not shown and controls are hidden if not stacked
+            if (elements.capacityControlsCard) {
+                elements.capacityControlsCard.classList.add('hidden');
+            }
         }
+
 
         if (state.trafficChart) state.trafficChart.destroy();
         state.trafficChart = new Chart(elements.chartCanvas, {
@@ -422,9 +485,86 @@ document.addEventListener('DOMContentLoaded', () => {
         const tmaTracker = new Set();
         data.forEach(d => { if (d.tma > 0 && !tmaTracker.has(`${d.date.toDateString()}-${d.timeSlot}`)) { totals.tma += d.tma; tmaTracker.add(`${d.date.toDateString()}-${d.timeSlot}`); } });
         const getAvg = (key) => (totals[key] / numDays).toFixed(1);
-        elements.avgDep.textContent = getAvg('isDeparture'); elements.avgArr.textContent = getAvg('isArrival');
-        elements.avgTma.textContent = getAvg('tma');
-        elements.avgTotal.textContent = (parseFloat(elements.avgDep.textContent) + parseFloat(elements.avgArr.textContent) + parseFloat(elements.avgTma.textContent)).toFixed(1);
+    elements.avgDep.textContent = getAvg(totals.isDeparture);
+    elements.avgArr.textContent = getAvg(totals.isArrival);
+    elements.avgTma.textContent = getAvg(totalTma);
+    elements.avgTotal.textContent = (
+        parseFloat(elements.avgDep.textContent) +
+        parseFloat(elements.avgArr.textContent) +
+        parseFloat(elements.avgTma.textContent)
+    ).toFixed(1);
+
+    // Min/Max calculation for Dep/Arr/TMA
+    const slotAggregates = {};
+    data.forEach(flight => {
+        const key = `${flight.date.toISOString().slice(0,10)}_${flight.timeSlot}`;
+        if (!slotAggregates[key]) {
+            slotAggregates[key] = { dep: 0, arr: 0, tma: 0, date: flight.date, slot: flight.timeSlot };
+        }
+        slotAggregates[key].dep += flight.isDeparture;
+        slotAggregates[key].arr += flight.isArrival;
+        if (flight.tma > 0) slotAggregates[key].tma = Math.max(slotAggregates[key].tma, flight.tma);
+    });
+
+    const aggregateValues = Object.values(slotAggregates);
+
+    const findMinMaxText = (prop) => {
+        if (aggregateValues.length === 0) return "N/A";
+        let minVal = Infinity, maxVal = -Infinity;
+        let minItem = null, maxItem = null;
+
+        aggregateValues.forEach(item => {
+            if (item[prop] < minVal) { minVal = item[prop]; minItem = item; }
+            if (item[prop] > maxVal) { maxVal = item[prop]; maxItem = item; }
+        });
+
+        if (minItem && maxItem) { // Ensure items were found
+             return `${minVal.toFixed(0)} (${minItem.date.toLocaleDateString()} ${minItem.slot}) / ${maxVal.toFixed(0)} (${maxItem.date.toLocaleDateString()} ${maxItem.slot})`;
+        }
+        return "N/A";
+    };
+
+    if (elements.depMinMaxDate) elements.depMinMaxDate.textContent = findMinMaxText('dep');
+    if (elements.arrMinMaxDate) elements.arrMinMaxDate.textContent = findMinMaxText('arr');
+    if (elements.tmaMinMaxDate) elements.tmaMinMaxDate.textContent = findMinMaxText('tma');
+}
+
+// New function for Capacity & Agents Min/Max
+function updateCapacityAgentMinMaxStats(capacityResult) {
+    if (!capacityResult || !elements.capacityMinMaxDate || !elements.agentsMinMaxDate) {
+        if(elements.capacityMinMaxDate) elements.capacityMinMaxDate.textContent = "N/A";
+        if(elements.agentsMinMaxDate) elements.agentsMinMaxDate.textContent = "N/A";
+        return;
+    }
+
+    const { capacities, effectiveAgents } = capacityResult;
+    const slots = Array.from({ length: 96 }, (_, i) => {
+        const hour = Math.floor(i / 4);
+        const minute = (i % 4) * 15;
+        return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    });
+
+    const findMinMaxForArrayText = (arr, arrSlots) => {
+        if (!arr || arr.length === 0) return "N/A";
+        let minVal = Infinity, maxVal = -Infinity;
+        let minSlot = "", maxSlot = "";
+        arr.forEach((val, idx) => {
+            if (val < minVal) { minVal = val; minSlot = arrSlots[idx]; }
+            if (val > maxVal) { maxVal = val; maxSlot = arrSlots[idx]; }
+        });
+
+        if (minSlot === "" && maxSlot === "" && arr.length > 0) { // Handle case where all values are the same
+            minVal = arr[0]; maxVal = arr[0]; minSlot = arrSlots[0]; maxSlot = arrSlots[0];
+        } else if (minSlot === "" && maxSlot === "") { // Truly empty or all non-numeric
+             return "N/A";
+        }
+
+        const refDateStr = state.currentStartDate ? state.currentStartDate.toLocaleDateString() : "N/A";
+        return `${minVal.toFixed(0)} (${refDateStr} ${minSlot}) / ${maxVal.toFixed(0)} (${refDateStr} ${maxSlot})`;
+    };
+
+    elements.capacityMinMaxDate.textContent = findMinMaxForArrayText(capacities, slots);
+    elements.agentsMinMaxDate.textContent = findMinMaxForArrayText(effectiveAgents, slots);
     }
     
     function updateSummaryTable(data, activeDays) {
@@ -451,7 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const colorScale = d3.scaleLinear().domain([0, d3.max(allValues) || 1])
             .range(['rgba(36, 40, 59, 0.1)', 'rgba(255, 158, 100, 0.6)']);
 
-        elements.summaryTableHead.innerHTML = `<tr><th>Métrique</th>${activeDays.map(i => `<th>${DAYS_OF_WEEK[i]}</th>`).join('')}</tr>`;
+        elements.summaryTableHead.innerHTML = `<tr><th></th>${activeDays.map(i => `<th>${DAYS_OF_WEEK[i]}</th>`).join('')}</tr>`; // "Métrique" removed
         elements.summaryTableBody.innerHTML = '';
         
         metrics.forEach(metric => {

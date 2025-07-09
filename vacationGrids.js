@@ -34,16 +34,23 @@ function parseCsv(csvString) {
     const values = lines[i].split(';');
     const rowObject = {};
 
-    // Iterate through headers and values, skipping the "Priorité" column (index 0)
-    for (let j = 1; j < headers.length; j++) {
-      const header = headers[j];
+    // Iterate through all headers and values
+    for (let j = 0; j < headers.length; j++) {
+      const header = headers[j].trim(); // Trim header to ensure clean keys
       let value = values[j] ? values[j].trim() : "0"; // Replace empty/undefined with "0"
 
       // Special handling for vacation name (it should not be '0' if empty)
       if (header === "Vacation" && value === "0") {
         value = ""; // Keep Vacation name empty if it was truly empty in CSV
       }
-      rowObject[header] = value;
+
+      // Store Priorité as a number
+      if (header === "Priorité") {
+        const priorityValue = parseInt(value, 10);
+        rowObject[header] = isNaN(priorityValue) ? 999 : priorityValue; // Default if NaN
+      } else {
+        rowObject[header] = value;
+      }
     }
     data.push(rowObject);
   }

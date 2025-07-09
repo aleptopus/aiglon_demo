@@ -81,8 +81,8 @@ class CapacityCalculator {
     
     // Filtrer les vacations non-chef et trier par priorité
     const nonChefProfiles = grid
-      .filter(profile => !['JC', 'MC', 'NC'].includes(profile.vacation))
-      .sort((a, b) => a.priorite - b.priorite);
+      .filter(profile => !['JC', 'MC', 'NC'].includes(profile.Vacation)) // 'Vacation' is the correct key from parseCsv
+      .sort((a, b) => a.Priorité - b.Priorité); // 'Priorité' is the correct key
     
     // Prendre les 7 premiers profils
     const selectedProfiles = nonChefProfiles.slice(0, 7);
@@ -96,50 +96,80 @@ class CapacityCalculator {
     return agentProfiles;
   }
 
-  getSIVReduction(periodCode, dayType, timestamp, sivHypothesis) {
+  getSIVReduction(periodCode, dayType, timestamp, sivHypothesis) { // timestamp is a Date object
     const sivPeriod = this.sivPeriodMapping[periodCode];
-    const hourMinute = `${String(timestamp.getHours()).padStart(2, '0')}h${String(timestamp.getMinutes()).padStart(2, '0')}`;
+    // Use UTC hours and minutes for SIV rule lookup, as keys in sivRules are UTC time strings
+    const hourMinute = `${String(timestamp.getUTCHours()).padStart(2, '0')}h${String(timestamp.getUTCMinutes()).padStart(2, '0')}`;
 
     const rule = this.sivRules[dayType]?.[sivPeriod]?.[sivHypothesis]?.[hourMinute];
     return rule !== undefined ? rule : 0;
   }
 
   applyHourlyAverage(capacitySeries) {
-    // This function will take a series of 15-min capacity values
-    // and apply a 4-period (60-min) rolling average, shifted by 3 periods (45 min)
-    // to align with the Python script's logic.
-    // For simplicity, we'll assume capacitySeries is an array of numbers.
-    // In a real scenario, this might involve more complex data structures or a dedicated library.
+    const resultSeries = [];
+    const fillValue = 6.0; // From Python's fillna(6.0)
+    const length = capacitySeries.length;
 
-    const averagedSeries = [];
-    for (let i = 0; i < capacitySeries.length; i++) {
-      // Calculate average over the next 4 periods (including current)
+    if (length === 0) {
+      return [];
+    }
+
+    for (let i = 0; i < length; i++) {
+      // Python's rolling().mean().shift(-3).fillna() means:
+      // result[i] = mean(original[i], original[i+1], original[i+2], original[i+3])
+      // For the last 3 elements, this window goes out of bounds for original[i+1] etc.
+      // and pandas shift(-3) would make these NaN, then fillna applies.
+      if (i >= length - 3 && length > 3) { // Ensure length > 3 to avoid issues with very short series
+        resultSeries[i] = fillValue;
+        continue;
+      }
+       if (i >= length -3 && length <=3) { // if series is 1,2,3 long, it still computes average
+          // let it compute with min_periods=1 logic below
+       }
+
+
       let sum = 0;
       let count = 0;
+      // Window of 4 periods: current (i) and next 3 (i+1, i+2, i+3)
       for (let j = 0; j < 4; j++) {
-        if (i + j < capacitySeries.length) {
+        if (i + j < length) {
           sum += capacitySeries[i + j];
           count++;
+        } else {
+          // min_periods=1 effect: if window is shorter, average what's available
+          break;
         }
       }
-      // Shift by 3 periods (45 min)
-      if (i >= 3) {
-        averagedSeries[i - 3] = count > 0 ? parseFloat((sum / count).toFixed(2)) : 0;
+
+      if (count > 0) {
+        resultSeries[i] = parseFloat((sum / count).toFixed(2));
+      } else {
+        // This case should ideally not be reached if capacitySeries is not empty
+        // and i is within bounds where count should be at least 1.
+        resultSeries[i] = fillValue;
       }
     }
-    // Fill remaining values (end of series) with the last calculated average or 0
-    for (let i = averagedSeries.length; i < capacitySeries.length; i++) {
-      averagedSeries[i] = averagedSeries[averagedSeries.length - 1] || 0;
-    }
-    return averagedSeries;
+    return resultSeries;
   }
 
-  calculateDailyCapacity(date, activeVacations, sivHypothesis = 'VFR fort') {
-    const { periodCode, dayType } = this.getPeriodAndDayType(date);
-    const grid = this.vacationGrids[dayType]?.[periodCode];
+  calculateDailyCapacity(date, activeVacations, sivHypothesis = 'VFR fort', forcedPeriod = null) {
+    const { periodCode: dateDerivedPeriod, dayType } = this.getPeriodAndDayType(date);
+    const actualPeriodCode = forcedPeriod || dateDerivedPeriod;
+
+    // Ensure actualPeriodCode is one of "Hiv", "Cha", "Cre"
+    const validPeriods = ["Hiv", "Cha", "Cre"];
+    if (!validPeriods.includes(actualPeriodCode)) {
+        console.warn(`Invalid period code: ${actualPeriodCode}. Defaulting to date-derived or 'Cha'.`);
+        // Fallback if forcedPeriod is somehow invalid
+        this.periodCodeForGrid = validPeriods.includes(dateDerivedPeriod) ? dateDerivedPeriod : "Cha";
+    } else {
+        this.periodCodeForGrid = actualPeriodCode; // Store for SIV reduction use if needed
+    }
+
+    const grid = this.vacationGrids[dayType]?.[this.periodCodeForGrid];
 
     if (!grid || grid.length === 0) {
-      console.warn(`No vacation grid found for ${dayType}/${periodCode}. Returning zero capacity.`);
+      console.warn(`No vacation grid found for ${dayType}/${this.periodCodeForGrid}. Returning zero capacity.`);
       return Array(96).fill(0); // 96 periods of 15 minutes in a day
     }
 
@@ -150,8 +180,10 @@ class CapacityCalculator {
     }
 
     const capacities = [];
+    const effectiveAgentsOverTime = []; // To store effective agents for each slot
+
     for (let i = 0; i < 96; i++) { // Iterate through 15-minute intervals of the day
-      const currentTimestamp = new Date(date);
+      const currentTimestamp = new Date(date); // currentTimestamp is local, based on the input 'date'
       currentTimestamp.setHours(0, 0, 0, 0); // Start of the day
       currentTimestamp.setMinutes(i * 15);
 
@@ -168,8 +200,10 @@ class CapacityCalculator {
         }
       }
 
-      const sivReduction = this.getSIVReduction(periodCode, dayType, currentTimestamp, sivHypothesis);
+      // Use this.periodCodeForGrid for SIV reduction, as it reflects the user's period choice
+      const sivReduction = this.getSIVReduction(this.periodCodeForGrid, dayType, currentTimestamp, sivHypothesis);
       const effectiveAgents = Math.max(0, agentsAtThisSlot - sivReduction);
+      effectiveAgentsOverTime.push(effectiveAgents); // Store it
       
       capacities.push(this.staffingLookup(effectiveAgents));
     }
@@ -177,12 +211,9 @@ class CapacityCalculator {
     // Apply rolling average as per Python script
     const finalCapacities = this.applyHourlyAverage(capacities);
     
-    // Also return the effective agents before averaging for min/max display
-    const effectiveAgentsRaw = effectiveAgentsPerSlot; // Store the raw effective agents before capacity conversion
-
     return {
       capacities: finalCapacities,
-      effectiveAgents: effectiveAgentsRaw
+      effectiveAgents: effectiveAgentsOverTime // Use the collected array
     };
   }
 }

@@ -31,13 +31,7 @@
                             </button>
                             <p id="csvFileName" class="file-name-display">Aucun fichier</p>
                         </div>
-                        <div class="upload-section">
-                            <input type="file" id="jsonFileInput" accept=".json" style="display: none;">
-                            <button onclick="document.getElementById('jsonFileInput').click()" class="button">
-                                Charger Fichier TMA (.json)
-                            </button>
-                            <p id="jsonFileName" class="file-name-display">Aucun fichier</p>
-                        </div>
+                        <!-- TMA File Upload Section Removed -->
                         </div>
                     </div>
                 </div>
@@ -116,7 +110,7 @@
                     
                     <div class="card">
                         <div class="chart-header">
-                            <h2 class="card-title">Trafic moyen par créneau horaire</h2>
+                            <h2 class="card-title" id="trafficChartTitle">Trafic moyen par créneau horaire</h2>
                              <button id="toggleChartTypeBtn" class="button-secondary">Vue Côte à Côte</button>
                         </div>
                         <div class="chart-container">
