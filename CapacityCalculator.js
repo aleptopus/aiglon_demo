@@ -63,8 +63,9 @@ class CapacityCalculator {
 
   getPeriodAndDayType(date) {
     const dateObj = new Date(date);
-    const monthDay = `${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
-    const weekday = dateObj.getDay(); // 0=Dim, 6=Sam
+    // Convert to UTC for consistent period/daytype calculation
+    const monthDay = `${String(dateObj.getUTCMonth() + 1).padStart(2, '0')}-${String(dateObj.getUTCDate()).padStart(2, '0')}`;
+    const weekday = dateObj.getUTCDay(); // 0=Dim, 6=Sam
     
     let period = null;
     for (const [name, ranges] of Object.entries(this.periods)) {
@@ -194,12 +195,17 @@ class CapacityCalculator {
   }
 
   getSIVReduction(periodCode, dayType, timestamp, sivHypothesis) {
+    // Cas spécial "fermé" : aucune réduction
+    if (sivHypothesis === 'fermé') {
+      return 0;
+    }
+    
     const sivPeriod = this.sivPeriodMapping[periodCode];
     
-    // Use local time for SIV rules lookup (rules are in UTC but we display in local time)
-    const localHours = timestamp.getHours();
-    const localMinutes = timestamp.getMinutes();
-    const hourMinute = `${String(localHours).padStart(2, '0')}h${String(localMinutes).padStart(2, '0')}`;
+    // Convert to UTC for SIV rules lookup
+    const utcHours = timestamp.getUTCHours();
+    const utcMinutes = timestamp.getUTCMinutes();
+    const hourMinute = `${String(utcHours).padStart(2, '0')}h${String(utcMinutes).padStart(2, '0')}`;
 
     const rule = this.sivRules[dayType]?.[sivPeriod]?.[sivHypothesis]?.[hourMinute];
     return rule !== undefined ? rule : 0;
@@ -266,7 +272,12 @@ class CapacityCalculator {
       currentTimestamp.setMinutes(i * 15);
       currentTimestamp.setSeconds(0); // Ensure seconds are 00
 
-      const hourMinuteStr = `${String(currentTimestamp.getHours()).padStart(2, '0')}:${String(currentTimestamp.getMinutes()).padStart(2, '0')}:00`;
+      // Convertir heure locale en UTC pour les grilles de vacations
+      const localHours = currentTimestamp.getHours();
+      const localMinutes = currentTimestamp.getMinutes();
+      const utcDate = new Date(currentTimestamp);
+      utcDate.setMinutes(utcDate.getMinutes() - utcDate.getTimezoneOffset());
+      const hourMinuteStr = `${String(utcDate.getUTCHours()).padStart(2, '0')}:${String(utcDate.getUTCMinutes()).padStart(2, '0')}:00`;
       console.log(`Processing slot ${hourMinuteStr}`);
 
       const agentsAtThisSlot = this.countActiveAgents(selectedAgentProfiles, hourMinuteStr);
@@ -317,7 +328,7 @@ class CapacityCalculator {
       currentTimestamp.setMinutes(i * 15);
       currentTimestamp.setSeconds(0);
 
-      const hourMinuteStr = `${String(currentTimestamp.getHours()).padStart(2, '0')}:${String(currentTimestamp.getMinutes()).padStart(2, '0')}:00`;
+      const hourMinuteStr = `${String(currentTimestamp.getUTCHours()).padStart(2, '0')}:${String(currentTimestamp.getUTCMinutes()).padStart(2, '0')}:00`;
       
       const agentsAtThisSlot = this.countActiveAgents(selectedAgentProfiles, hourMinuteStr);
       const sivReduction = this.getSIVReduction(periodCode, dayType, currentTimestamp, sivHypothesis);

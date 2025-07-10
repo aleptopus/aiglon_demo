@@ -38,8 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let state = {
         cohorData: [],
         tmaMap: new Map(),
-        grilleVacations: vacationGrids, // Initialize with global data
-        compoEquipe: staffingMap, // Initialize with global data
+        grilleVacations: vacationGrids,
+        compoEquipe: staffingMap,
         combinedData: [],
         fullDateRange: [],
         currentStartDate: null,
@@ -47,9 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
         isStacked: true,
         trafficChart: null,
         windowDurationMs: 0,
-        selectedGrid: null, // Currently selected vacation grid
-        customAgentSelection: { Je: [], M: [], J: [], SN: [] }, // Custom agent selection
-        availableAgents: { Je: [], M: [], J: [], SN: [] }, // Available agents for current grid
+        selectedGrid: null,
+        customAgentSelection: { Je: [], M: [], J: [], SN: [] },
+        availableAgents: { Je: [], M: [], J: [], SN: [] },
+        useUTC: true, // Nouvel état pour le fuseau horaire
     };
 
     console.log('state.grilleVacations after init:', state.grilleVacations);
@@ -75,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         [elements.dateStartInput, elements.dateEndInput].forEach(el => el.addEventListener('change', updateFromDateInputs));
         elements.sivSelect.addEventListener('change', () => updateDashboard(false));
         elements.periodSelect.addEventListener('change', handleGridSelection);
+        document.getElementById('toggleTimezoneBtn').addEventListener('click', toggleTimezone);
 
         console.log('Chart Canvas Context:', elements.chartCanvas);
         console.log('Chart Canvas Width:', elements.chartCanvas.canvas.width);
@@ -300,6 +302,12 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.toggleChartBtn.textContent = state.isStacked ? 'Vue Côte à Côte' : 'Vue Empilée';
         updateDashboard(false);
     }
+    
+    function toggleTimezone() {
+        state.useUTC = !state.useUTC;
+        document.getElementById('toggleTimezoneBtn').textContent = state.useUTC ? 'UTC' : 'Local';
+        updateDashboard(false);
+    }
 
     function updateMainChart(data, showCapacity) { // showCapacity is now always true if hasCapacityData
         const numDays = new Set(data.map(d => d.date.toDateString())).size || 1;
@@ -399,8 +407,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                     const h = parseInt(label.split(':')[0]); const m = parseInt(label.split(':')[1]);
                                     const startDate = new Date(2000, 0, 1, h, m);
                                     const endDate = new Date(startDate.getTime() + 59 * 60 * 1000);
-                                    const formatTime = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                                    return `Créneau ${formatTime(startDate)} - ${formatTime(endDate)}`;
+                                    const getTime = (d) => state.useUTC ? 
+                                        `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}` :
+                                        `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                                    return `Créneau ${getTime(startDate)} - ${getTime(endDate)} (${state.useUTC ? 'UTC' : 'Local'})`;
                                 },
                                 label: function(context) { return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}`; },
                                 footer: function(context) {
@@ -412,7 +422,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     },
                     scales: {
-                        x: { stacked: state.isStacked, ticks: { color: 'var(--text-secondary)' }, grid: { color: 'rgba(161, 170, 184, 0.2)' } },
+                        x: { 
+                            stacked: state.isStacked, 
+                            ticks: { 
+                                color: 'var(--text-secondary)',
+                                callback: function(value, index, ticks) {
+                                    const slot = this.getLabelForValue(value);
+                                    const [h, m] = slot.split(':').map(Number);
+                                    const date = new Date(2000, 0, 1, h, m);
+                                    return state.useUTC ? 
+                                        `${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}` :
+                                        slot;
+                                }
+                            }, 
+                            grid: { color: 'rgba(161, 170, 184, 0.2)' } 
+                        },
                         y: { stacked: state.isStacked, beginAtZero: true, ticks: { color: 'var(--text-secondary)' }, grid: { color: 'rgba(161, 170, 184, 0.2)' } }
                     }
                 }

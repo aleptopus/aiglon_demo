@@ -124,7 +124,11 @@
                     <div class="card">
                         <div class="chart-header">
                             <h2 class="card-title">Trafic moyen par créneau horaire</h2>
-                             <button id="toggleChartTypeBtn" class="button-secondary">Vue Côte à Côte</button>
+                            <div>
+                                <button id="toggleChartTypeBtn" class="button-secondary">Vue Côte à Côte</button>
+                                <!-- Nouveau bouton de bascule UTC/local -->
+                                <button id="toggleTimezoneBtn" class="button-secondary">UTC</button>
+                            </div>
                         </div>
                         <div class="chart-container">
                             <canvas id="trafficChart"></canvas>
@@ -157,7 +161,8 @@
                             </div>
                             <div class="control-group">
                                 <label for="sivSelect">Hypothèse SIV</label>
-                                <select id="sivSelect" class="select-dropdown">
+<select id="sivSelect" class="select-dropdown">
+  <option value="fermé">Fermé</option>
                                     <option value="VFR faible">Faible</option>
                                     <option value="VFR moyen">Moyen</option>
                                     <option value="VFR fort" selected>Fort</option>

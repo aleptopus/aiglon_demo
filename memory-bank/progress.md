@@ -61,22 +61,32 @@
 - [ ] **Validation des courbes** : Les courbes s'affichent mais nécessitent validation métier
 - [ ] **Cohérence des calculs** : Vérifier que les résultats correspondent aux attentes
 
+## ✅ Travaux récents
+
+### Gestion des fuseaux horaires
+- [x] **Bascule UTC/Local** dans l'interface graphique
+- [x] **Conversion des vacations** locales en UTC pour les calculs
+- [x] **Option "Fermé"** ajoutée au menu SIV (aucune réduction d'agents)
+- [x] **Correction des offsets** pour les périodes d'été/hiver
+
+### Prochaines vérifications
+- [ ] **Validation calculs UTC** : Vérifier le décalage de 2h en été
+- [ ] **Tests saisonniers** : Hiver (UTC+1) vs Été (UTC+2)
+- [ ] **Cohérence données** : Comparaison script Python/JS
+
 ## 📋 Prochaines étapes
 
-1. **Validation métier** : 
+1. **Implémentation finale UTC** :
+   - Conversion dynamique des grilles (+2h été/+1h hiver)
+   - Tests avec dates de changement d'heure
+
+2. **Validation métier** : 
    - Vérifier que les courbes correspondent aux attentes
-   - Valider les priorités d'agents avec les règles métier
-   - Tester avec des dates représentatives
+   - Tests sur créneaux critiques (nuit, changement d'heure)
 
-2. **Tests approfondis** :
-   - Tester différentes périodes (Hiver/Chargée/Creuse)
-   - Tester différents types de jours (Semaine/Samedi/Dimanche)
-   - Vérifier les hypothèses SIV
-
-3. **Optimisations** :
-   - Nettoyage des logs de débogage restants
-   - Amélioration des performances si nécessaire
-   - Documentation technique finale
+3. **Documentation** :
+   - Mise à jour du flux de données avec gestion UTC
+   - Ajout schéma conversion heures
    
 4. **à mettre en place** :
    - Filtre à modifier si dans le calendrier j'affiche une date de début et de fin égale on affiche cette journée par exemple si date début 10 juillet et date de fin 10 juillet
