@@ -77,7 +77,33 @@
    - Nettoyage des logs de débogage restants
    - Amélioration des performances si nécessaire
    - Documentation technique finale
-
+   
+4. **à mettre en place** :
+   - Filtre à modifier si dans le calendrier j'affiche une date de début et de fin égale on affiche cette journée par exemple si date début 10 juillet et date de fin 10 juillet
+   alors on affiche de le 10 juillet
+   - Dans les vacations on va supprimer les boutons des vacation obligatoires donc l'utilisateur n'aura pas à les modifier dans son scénario whatif, il s'agit des vacations chef 
+   MC, JC et NC. Il y a aussi les 2 N qui sont obligatoires, attention les N concernent le jour J+1, j'ai remarqué qu'elles sont mal placées. Par exemple si un agent est N le 10 juillet 
+   il réalise la nuit du 10 au 11 juillet.
+   - Il faut un bouton bascule "toggle button" dans le graphique à côté des légendes pour passer de l'heure locale à l'heure utc
+   - Il faut ajouter le scénario SIV fermé avec aussi dans le menu déroulant. Dans ce mode il n'y a pas de réduction d'agents
+   - Je veux ajouter en dernière partie un graphique waffle pour repésenter les vacations. Lorsuqe l'utilisateur aura sélectionné une période pour la grille alors les vacations 
+   seront visualisées par un carré pour 15 min (pour 24h 96 carrés) avec selon le statut (transparent si vide, violet si valeur = 1, rouge pour C, bleu cile pour P et orange pour R). Je souhaite 
+   utiliser la bibliothèque nivo pour cela. Tu disposes du fichier contexte nivo.txt pour comprendre la bibliothèque.
+   
+5. **à changer dans l'interface** :
+   - Je veux qu'on respecte la chartre graphique définie et garder un espacement entre les blocs.
+   - Je veux les données indicateur en haut (Départs/jour, Arrivées/jour, TMA/jour, Total /jour) et sur une seule ligne. Je veux que 6 panneaux indicateurs sur une même ligne.
+   Aux précédents on ajoute Date traffic min et Date traffic max, lorsque l'utilisateur sélectionne une plage de date il faut lui afficher la date qui a le plus de trafic (somme LFLL et TMA),
+   et la date qui en compte le moins. On supprime donc Capacité min/max, Agents min/max, Départ et arrivées min/max.
+   - Je veux centrer le titre du graphique et afficher le nombre de jours concernés par le filtre défini par l'utilisateur. Par exemple si l'utilisateur propose date de début 10 juillet 2025 
+   et date de fin 25 juillet 2025 puis flitre que les samedis on affiche: Trafic moyen par créneau horaire (nombre de jours: 2) 
+   - Il faut désactiver la courbe Capacité si l'utilisateur bascule sur la vue côté à côté.
+   - Pour le bloc contrôle de capacité: Je veux optimiser l'affichage, supprime le titre et les soustitres vacations. Crée des bouton plus étroits sans changer la taille en tronquant le nom des vacations,
+   M2 au lieu de M2#01 (les boutons auront la même taille que les boutons actuel chefs). Dans l'idéal je veux tout sur une ligne. D'abord le menu déroulant avec Hypothèse SIV (garde ce sous titre) et dans l'ordre dans le menu (fermé, faible,moyen et fort). Pour ce menu déroulant 
+garde par défault le paramétrage fort si l'utilisateur ne modifie pas ce menu. Ensuite je veux 3 blocs avec le groupe M, J et SN sans sous titres. On ne laissera pas le choix à l'utilisateur de activer au désactiver 
+les vacations chefs (MC, JC et NC) et les vacations N. Il y aura donc le bloc M avec les 7 vacations selon l'ordre de la grille, le bloc J avec 7 vacations selon l'ordre de 
+la grille et le bloc N avec 5 vacations selon l'ordre de la grille.   
+   
 ## 🎯 Objectifs atteints
 
 - ✅ Application fonctionnelle de calcul de capacité aéroportuaire

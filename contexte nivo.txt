@@ -1,0 +1,214 @@
+TITLE: Installing nivo Core and Bar Chart Package with Yarn
+DESCRIPTION: This command installs the core nivo library along with the specific `@nivo/bar` package, which provides components for creating bar charts. Users should install additional `@nivo` packages based on the specific chart types they intend to use in their application.
+SOURCE: https://github.com/plouc/nivo/blob/master/README.md#_snippet_0
+
+LANGUAGE: Shell
+CODE:
+```
+yarn add @nivo/core @nivo/bar
+```
+
+----------------------------------------
+
+TITLE: Making a POST Request to nivo-api Chord Chart Endpoint (sh)
+DESCRIPTION: This curl command demonstrates how to send a POST request to the /charts/chord endpoint of the nivo-api. It specifies 'Content-Type' and 'Accept' headers as 'application/json' and includes a JSON payload with 'width', 'height', and 'data' for the chart. The expected output is a JSON object containing an 'id' and a 'url' to the rendered chart.
+SOURCE: https://github.com/plouc/nivo/blob/master/api/README.md#_snippet_0
+
+LANGUAGE: sh
+CODE:
+```
+curl -X POST \
+  --header 'Content-Type: application/json' \
+  --header 'Accept: application/json' \
+  -d '{ "width": 500, "height": 500, "data": [[223, 299, 345, 184], [123, 248, 65, 123], [412, 76, 187, 312], [97, 37, 502, 176]]}' \
+  'http://localhost:3030/charts/chord'
+```
+
+----------------------------------------
+
+TITLE: Initializing Nivo Project Dependencies (pnpm)
+DESCRIPTION: This command initializes the Nivo project by installing all required dependencies and establishing links between its various packages using pnpm workspaces. It's the first step after cloning the repository and ensures the project is ready for development.
+SOURCE: https://github.com/plouc/nivo/blob/master/CONTRIBUTING.md#_snippet_0
+
+LANGUAGE: Shell
+CODE:
+```
+make init
+```
+
+----------------------------------------
+
+TITLE: Retrieving a Rendered nivo Chart (HTTP)
+DESCRIPTION: This snippet shows how to retrieve a previously generated nivo chart using a GET request to the URL provided in the POST request's response. The URL points to the specific rendered chart identified by its unique ID, allowing direct access to the generated visualization.
+SOURCE: https://github.com/plouc/nivo/blob/master/api/README.md#_snippet_1
+
+LANGUAGE: HTTP
+CODE:
+```
+GET http://localhost:3000/r/73633fea-160e-4118-a534-377c3ed85254
+```
+
+----------------------------------------
+
+TITLE: Available nivo-api Chart Endpoints (HTTP)
+DESCRIPTION: This list enumerates the various chart types supported by the nivo-api, each accessible via a POST request to its respective endpoint. These endpoints allow users to generate different nivo charts by providing chart-specific data and configuration in the request body.
+SOURCE: https://github.com/plouc/nivo/blob/master/api/README.md#_snippet_2
+
+LANGUAGE: HTTP
+CODE:
+```
+POST /charts/bar
+POST /charts/bubble
+POST /charts/calendar
+POST /charts/chord
+POST /charts/line
+POST /charts/pie
+POST /charts/radar
+POST /charts/sankey
+POST /charts/sunburst
+POST /charts/treemap
+```
+
+----------------------------------------
+
+TITLE: Running Nivo Package in Development Mode
+DESCRIPTION: This command starts a development watcher for a specific Nivo package (e.g., `@nivo/bar`), rebuilding it automatically upon source code changes. This is essential when working on components that are consumed by Storybook or the demo website to see immediate updates.
+SOURCE: https://github.com/plouc/nivo/blob/master/CONTRIBUTING.md#_snippet_2
+
+LANGUAGE: Shell
+CODE:
+```
+make pkg-dev-bar
+```
+
+----------------------------------------
+
+TITLE: Starting Nivo Storybook Development Server
+DESCRIPTION: This command starts the Storybook development server for Nivo, providing an isolated environment to work on and visualize individual components. It's the easiest way to develop Nivo components and see them in action.
+SOURCE: https://github.com/plouc/nivo/blob/master/CONTRIBUTING.md#_snippet_1
+
+LANGUAGE: Shell
+CODE:
+```
+make storybook
+```
+
+----------------------------------------
+
+TITLE: Running Unit Tests for All Nivo Packages
+DESCRIPTION: This command executes all unit tests across all Nivo packages using Jest. It's used to ensure code quality and prevent regressions across the entire library before committing changes.
+SOURCE: https://github.com/plouc/nivo/blob/master/CONTRIBUTING.md#_snippet_6
+
+LANGUAGE: Shell
+CODE:
+```
+make pkgs-test
+```
+
+----------------------------------------
+
+TITLE: Linting All Nivo Packages with ESLint
+DESCRIPTION: This command runs ESLint across all Nivo packages to enforce consistent code style and identify potential issues. It helps maintain code quality and adherence to project standards across the entire codebase.
+SOURCE: https://github.com/plouc/nivo/blob/master/CONTRIBUTING.md#_snippet_9
+
+LANGUAGE: Shell
+CODE:
+```
+make pkgs-lint
+```
+
+----------------------------------------
+
+TITLE: Formatting Nivo Codebase with Prettier
+DESCRIPTION: This command applies Prettier formatting rules across the Nivo codebase to ensure consistent code style. It should be run before submitting modifications to maintain code quality and readability.
+SOURCE: https://github.com/plouc/nivo/blob/master/CONTRIBUTING.md#_snippet_8
+
+LANGUAGE: Shell
+CODE:
+```
+make fmt
+```
+
+----------------------------------------
+
+TITLE: Starting Nivo Demo/Documentation Website
+DESCRIPTION: This command starts the local development server for the Nivo demo and documentation website. It allows developers to see how components behave with various controls and is useful for updating documentation related to component APIs.
+SOURCE: https://github.com/plouc/nivo/blob/master/CONTRIBUTING.md#_snippet_3
+
+LANGUAGE: Shell
+CODE:
+```
+make website
+```
+
+----------------------------------------
+
+TITLE: Building All Nivo Packages
+DESCRIPTION: This command rebuilds all Nivo packages without starting a watcher. It's an alternative to `pkg-dev-*` for a one-time build of the entire monorepo, useful before deploying or for a clean build of all components.
+SOURCE: https://github.com/plouc/nivo/blob/master/CONTRIBUTING.md#_snippet_4
+
+LANGUAGE: Shell
+CODE:
+```
+make pkgs-build
+```
+
+----------------------------------------
+
+TITLE: Building a Specific Nivo Package
+DESCRIPTION: This command rebuilds a single, specified Nivo package (e.g., `@nivo/bar`) without running a watcher. It's useful for quickly compiling changes to a particular package without affecting others or starting a continuous build process.
+SOURCE: https://github.com/plouc/nivo/blob/master/CONTRIBUTING.md#_snippet_5
+
+LANGUAGE: Shell
+CODE:
+```
+make pkg-build-bar
+```
+
+----------------------------------------
+
+TITLE: Linting a Specific Nivo Package with ESLint
+DESCRIPTION: This command runs ESLint only for a specified Nivo package (e.g., `@nivo/bar`), allowing for faster linting when changes are confined to a single package. This is useful for targeted code quality checks.
+SOURCE: https://github.com/plouc/nivo/blob/master/CONTRIBUTING.md#_snippet_10
+
+LANGUAGE: Shell
+CODE:
+```
+make pkg-lint-bar
+```
+
+----------------------------------------
+
+TITLE: Running Unit Tests for a Specific Nivo Package
+DESCRIPTION: This command runs unit tests only for a specified Nivo package (e.g., `@nivo/bar`), speeding up the testing process when modifications are limited to a single package. This is efficient for focused development.
+SOURCE: https://github.com/plouc/nivo/blob/master/CONTRIBUTING.md#_snippet_7
+
+LANGUAGE: Shell
+CODE:
+```
+make pkg-test-bar
+```
+
+----------------------------------------
+
+TITLE: Generating Nivo Package Screenshots
+DESCRIPTION: This command generates screenshots for Nivo packages from the running website (expected on port 3000). These screenshots are used in package READMEs to illustrate components and require the website to be active.
+SOURCE: https://github.com/plouc/nivo/blob/master/CONTRIBUTING.md#_snippet_11
+
+LANGUAGE: Shell
+CODE:
+```
+make pkgs-screenshots
+```
+
+----------------------------------------
+
+TITLE: Deploying Nivo Website and Storybook
+DESCRIPTION: This command deploys both the Nivo website and Storybook to GitHub Pages. It requires access to the Nivo GitHub repository and is used for publishing the documentation and component showcases for public access.
+SOURCE: https://github.com/plouc/nivo/blob/master/CONTRIBUTING.md#_snippet_12
+
+LANGUAGE: Shell
+CODE:
+```
+make deploy-all
+```
