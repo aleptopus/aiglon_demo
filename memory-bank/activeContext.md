@@ -15,45 +15,62 @@ Le projet Aiglon est maintenant fonctionnel avec des courbes de capacité qui s'
   - Sélection des agents maintenant opérationnelle (3 Je + 8 M + 8 J + 8 SN)
   - Interface de sélection d'agents avec boutons interactifs
   - Calculs de capacité générant des valeurs correctes
+  - **Moyenne glissante corrigée** : Application sur les capacités de 15 min, alignée sur le début du créneau.
+  - **Conversion UTC/Local pour grilles de vacation** : Tentative de correction du décalage horaire.
 
 - **script.js**:
   - Intégration complète de la classe `CapacityCalculator`
   - Interface de sélection d'agents par type (Je, M, J, SN)
   - Affichage des courbes de capacité en orange
   - Gestion des grilles de vacation par période
+  - **Alignement courbe capacité** : Tentative d'alignement sur le bord gauche des histogrammes (`stepped: 'before'`).
+  - **Traitement trafic en UTC** : `timeSlot` des données COHOR basé sur l'heure UTC.
 
 ## Next Steps
-1. **Validation métier** : 
-   - Vérifier que les courbes correspondent aux attentes métier
-   - Valider que l'ordre de priorité (MC, M1#01, M1#02, etc.) est correct
-   - Tester avec différentes dates représentatives
+1. **Résoudre le décalage temporel et l'alignement des courbes :**
+   - Vérifier et corriger le décalage persistant entre la courbe de capacité et les histogrammes de trafic.
+   - S'assurer que le pic de capacité s'affiche à la bonne heure (ex: 05h UTC au lieu de 06h UTC).
+   - Confirmer que l'alignement de la courbe de capacité est sur le bord gauche des histogrammes.
+   - Revoir la gestion des fuseaux horaires (UTC/Local) pour s'assurer de la cohérence, notamment pour l'heure d'été/hiver.
 
-2. **Tests approfondis** :
-   - Tester différentes périodes (Hiver/Chargée/Creuse)
-   - Tester différents types de jours (Semaine/Samedi/Dimanche)
-   - Vérifier les hypothèses SIV
+2. **Vérifier l'application des règles SIV :**
+   - S'assurer que les réductions SIV sont correctement appliquées pour toutes les hypothèses (faible, moyen, fort), et pas seulement pour "fermé".
+   - Analyser les données de `sivRules.js` si les réductions attendues ne sont pas appliquées.
 
-3. **Nettoyage et optimisation** :
+3. **Logique des vacations de nuit (N) :**
+   - Implémenter la logique spécifique pour les vacations de nuit (N) qui s'appliquent au J+1 et sont obligatoires.
+
+4. **Nettoyage et optimisation** :
    - Supprimer les logs de débogage restants
    - Optimiser les performances si nécessaire
    - Finaliser la documentation
 
 ## Active Decisions and Considerations
 - **Priorité des agents** : Ordre d'apparition dans le fichier CSV (solution finale validée)
-- **Sélection d'agents** : 7 premiers agents non-chefs par priorité
+- **Sélection d'agents** : 7 premiers agents non-chefs par priorité, avec vacations fixes incluses.
 - **Architecture modulaire** : Séparation claire entre parsing, calculs et affichage
 - **Compatibilité** : Maintien de la structure existante des données
 
 ## Current Status
-✅ **FONCTIONNEL** : L'application affiche maintenant des courbes de capacité avec des valeurs réalistes. Le problème critique de sélection d'agents a été résolu. Les calculs de capacité produisent des résultats cohérents basés sur les grilles de vacation réelles.
+⚠️ **DÉCALAGE PERSISTANT** : L'application affiche des courbes de capacité, mais un décalage temporel persiste entre la courbe de capacité et les histogrammes de trafic. Le calcul de capacité est fonctionnel pour l'hypothèse SIV "fermé", mais nécessite une vérification approfondie pour les autres hypothèses.
 
 ## Problèmes Résolus
 1. **Parsing CSV défaillant** → Normalisation des en-têtes
 2. **Priorités incorrectes** → Ordre d'apparition dans le fichier
 3. **Sélection d'agents vide** → Correction de la logique de priorité
 4. **Capacités nulles** → Agents correctement sélectionnés et actifs
+5. **Moyenne glissante incorrecte** → Application sur les capacités, alignée sur le début de la fenêtre.
+6. **Heures SIV incorrectes** → Passage de `utcTimestamp` à `getSIVReduction`.
+
+## Problèmes Actuels
+1.  **Décalage Courbe Capacité / Trafic :** La courbe de capacité est toujours décalée par rapport aux histogrammes de trafic, et son alignement sur le bord gauche des barres n'est pas correct. Le pic de capacité s'affiche à 06h UTC au lieu de 05h UTC.
+2.  **Gestion Heure d'Été/Hiver :** Il semble y avoir un décalage d'une heure pour les dates en heure d'été, suggérant un problème dans la conversion UTC/Local pour les grilles de vacation.
+3.  **Application des Règles SIV :** Les réductions SIV ne semblent pas s'appliquer correctement pour les hypothèses "faible", "moyen", "fort", ou les données dans `sivRules.js` ne correspondent pas aux attentes.
 
 ## Validation Requise
 - Cohérence des courbes avec les attentes métier
 - Ordre de priorité des agents conforme aux règles
 - Comportement correct sur différentes dates/périodes
+- **Correction du décalage temporel et alignement visuel.**
+- **Validation de l'application des règles SIV.**
+- **Validation de la logique des vacations de nuit.**

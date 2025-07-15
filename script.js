@@ -163,13 +163,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     const dayOfWeek = (currentDate.getUTCDay() + 6) % 7;
                     if (opsDaysStr[dayOfWeek] !== '0') {
                         const utcDt = new Date(`${currentDate.toISOString().slice(0, 10)}T${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}:00Z`);
+                        // timeSlot doit être basé sur l'heure UTC du vol, car les données TMA sont en UTC
+                        const makeSlotUTC = (date) => `${String(date.getUTCHours()).padStart(2, '0')}:${String(Math.floor(date.getUTCMinutes() / 15) * 15).padStart(2, '0')}`;
+                        
+                        // localTmaDt est utilisé pour la date du vol, mais le timeSlot doit être UTC
                         const offsetMinutes = values[colIndices.ad] === 'A' ? -24 : (values[colIndices.ad] === 'D' ? 11 : 0);
-                        const localTmaDt = new Date(utcDt.getTime() + offsetMinutes * 60 * 1000);
-                        const makeSlot = (date) => `${String(date.getHours()).padStart(2, '0')}:${String(Math.floor(date.getMinutes() / 15) * 15).padStart(2, '0')}`;
+                        const localTmaDt = new Date(utcDt.getTime() + offsetMinutes * 60 * 1000); // Keep this for date/datetime if needed elsewhere
+
                         flights.push({ 
-                            date: new Date(localTmaDt.getFullYear(), localTmaDt.getMonth(), localTmaDt.getDate()), 
-                            datetime: localTmaDt,
-                            timeSlot: makeSlot(localTmaDt), 
+                            date: new Date(utcDt.getFullYear(), utcDt.getMonth(), utcDt.getDate()), // Date should be UTC for consistency
+                            datetime: utcDt, // Datetime should be UTC for consistency
+                            timeSlot: makeSlotUTC(utcDt), // timeSlot should be UTC
                             isArrival: values[colIndices.ad] === 'A' ? 1 : 0, 
                             isDeparture: values[colIndices.ad] === 'D' ? 1 : 0 
                         });
@@ -347,8 +351,8 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         });
 
-        // Afficher la capacité si les données sont disponibles
-        if (showCapacity && Object.keys(state.grilleVacations).length > 0 && Object.keys(state.compoEquipe).length > 0) {
+        // Afficher la capacité si les données sont disponibles et si la vue est empilée
+        if (state.isStacked && showCapacity && Object.keys(state.grilleVacations).length > 0 && Object.keys(state.compoEquipe).length > 0) {
             // Si aucune grille n'est sélectionnée, utiliser une grille par défaut
             let gridToUse = state.selectedGrid;
             let customSelection = state.customAgentSelection;
@@ -379,8 +383,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: 'line',
                 fill: true,
                 pointRadius: 0,
-                stepped: true,  // Courbe en escalier
-                order: -1
+                stepped: 'before',  // Courbe en escalier, alignée sur le début du créneau
+                order: -1,
+                hidden: !state.isStacked // Hide if not stacked
             });
         }
 
@@ -540,15 +545,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (container) container.innerHTML = '';
         });
         
-        // Generate buttons for each agent type
-        Object.keys(state.availableAgents).forEach(type => {
+        // Generate buttons for each agent type, excluding fixed ones
+        ['Je', 'M', 'J', 'SN'].forEach(type => { // Explicitly iterate over types that have selectable buttons
             const container = buttonContainers[type];
             if (!container) return;
             
             const agents = state.availableAgents[type];
-            const maxAgents = type === 'Je' ? 3 : 8;
+            const maxAgents = type === 'Je' ? 3 : 8; // Max agents to display for selection
             
-            agents.slice(0, maxAgents).forEach((agent, index) => {
+            // Filter out fixed agents (MC, JC, NC) if they somehow appear here, though they should be in their own categories
+            const selectableAgents = agents.filter(agent => !['MC', 'JC', 'NC'].includes(agent.vacation));
+
+            selectableAgents.slice(0, maxAgents).forEach((agent, index) => {
                 const button = document.createElement('button');
                 button.className = 'agent-button';
                 button.textContent = agent.vacation;
@@ -564,10 +572,25 @@ document.addEventListener('DOMContentLoaded', () => {
         // Initialize with default selection (3 Je + 8 M + 8 J + 8 SN)
         state.customAgentSelection = { Je: [], M: [], J: [], SN: [] };
         
-        Object.keys(state.availableAgents).forEach(type => {
+        // Add fixed agents to selection first
+        if (state.availableAgents.MC) state.customAgentSelection.M.push(...state.availableAgents.MC.map(a => a.vacation));
+        if (state.availableAgents.JC) state.customAgentSelection.J.push(...state.availableAgents.JC.map(a => a.vacation));
+        if (state.availableAgents.NC) state.customAgentSelection.SN.push(...state.availableAgents.NC.map(a => a.vacation));
+
+        ['Je', 'M', 'J', 'SN'].forEach(type => {
             const maxAgents = type === 'Je' ? 3 : 8;
-            const agents = state.availableAgents[type].slice(0, maxAgents);
-            state.customAgentSelection[type] = agents.map(agent => agent.vacation);
+            // Filter out fixed agents from the slice, as they are already handled
+            const agentsToSelect = state.availableAgents[type].filter(agent => !['MC', 'JC', 'NC'].includes(agent.vacation));
+            
+            // Adjust slice based on how many fixed agents are already included in the type's count
+            const currentCount = state.customAgentSelection[type].length;
+            const remainingToSelect = maxAgents - currentCount;
+
+            if (remainingToSelect > 0) {
+                agentsToSelect.slice(0, remainingToSelect).forEach(agent => {
+                    state.customAgentSelection[type].push(agent.vacation);
+                });
+            }
         });
         
         updateAgentButtonStates();
