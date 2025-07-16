@@ -41,7 +41,7 @@ function parseCsv(csvString) {
 
     for (let j = 0; j < headers.length; j++) {
       const header = headers[j]; // Sera "priorite", "vacation", "00:00:00", etc.
-      let value = values[j] ? values[j].trim() : "0";
+      let value = values[j] ? values[j].trim() : ""; // Ne pas remplacer les vides par "0" par défaut
 
       if (header === "vacation" && value === "0") {
         value = ""; 

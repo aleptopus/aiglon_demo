@@ -20,9 +20,9 @@
         
         <div class="info">
             <h3>Configuration de Test</h3>
-            <p><strong>Effectif nominal:</strong> 3 Je + 8 M + 8 J + 8 SN</p>
-            <p><strong>Grille:</strong> <span id="currentGrid">SemCha (Semaine Chargée)</span></p>
-            <p><strong>Hypothèse SIV:</strong> VFR fort</p>
+            <p><strong>Effectif nominal:</strong> 3 Je + 7 M + 8 J + 7 SN</p>
+            <p><strong>Grille:</strong> <span id="currentGrid">SamCha (Samedi Chargé)</span></p>
+            <p><strong>Hypothèse SIV:</strong> fermé</p>
         </div>
 
         <div class="grid-selector">
@@ -31,7 +31,7 @@
                 <option value="SemCha">Semaine Chargée</option>
                 <option value="SemCre">Semaine Creuse</option>
                 <option value="SemHiv">Semaine Hiver</option>
-                <option value="SamCha">Samedi Chargé</option>
+                <option value="SamCha" selected>Samedi Chargé</option>
                 <option value="SamCre">Samedi Creuse</option>
                 <option value="SamHiv">Samedi Hiver</option>
                 <option value="DimCha">Dimanche Chargé</option>
@@ -66,7 +66,7 @@
             console.log(`Calcul pour la grille: ${gridKey}`);
             
             // Calculer la capacité
-            const result = calculator.calculateCapacityWithSpecificGrid(gridKey, null, 'VFR fort');
+            const result = calculator.calculateCapacityWithSpecificGrid(gridKey, null, 'fermé');
             const capacities = result.capacities;
             
             console.log('Capacités calculées:', capacities);
@@ -186,8 +186,8 @@
             updateChart(this.value);
         });
         
-        // Initialiser avec SemCha
-        updateChart('SemCha');
+        // Initialiser avec SamCha (Samedi Chargé)
+        updateChart('SamCha');
     </script>
 </body>
 </html>

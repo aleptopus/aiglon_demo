@@ -204,8 +204,8 @@ class CapacityCalculator {
       agentProfiles[index++] = profile;
     });
     
-    // 8 M (après MC)
-    agentsByType.M.slice(0, 8 - agentsByType.MC.length).forEach(profile => {
+    // 7 M (après MC) - Configuration spécifique pour le test
+    agentsByType.M.slice(0, 7 - agentsByType.MC.length).forEach(profile => {
       agentProfiles[index++] = profile;
     });
     
@@ -214,13 +214,13 @@ class CapacityCalculator {
       agentProfiles[index++] = profile;
     });
     
-    // 8 SN (après NC et N) - ajuster pour les agents N déjà inclus
+    // 7 SN (après NC et N) - Configuration spécifique pour le test
     const nonNightSN = agentsByType.SN.filter(p => !p.vacation.startsWith('N'));
-    nonNightSN.slice(0, 8 - agentsByType.NC.length - nightAgents.slice(0, 2).length).forEach(profile => {
+    nonNightSN.slice(0, 7 - agentsByType.NC.length - nightAgents.slice(0, 2).length).forEach(profile => {
       agentProfiles[index++] = profile;
     });
     
-    console.log(`✓ Sélection automatique: ${Object.keys(agentProfiles).length} agents mappés (3 Je + 8 M + 8 J + 8 SN).`);
+    console.log(`✓ Sélection automatique: ${Object.keys(agentProfiles).length} agents mappés (3 Je + 7 M + 8 J + 7 SN).`);
     return agentProfiles;
   }
 
@@ -272,20 +272,57 @@ class CapacityCalculator {
     const averagedSeries = new Array(capacitySeries.length).fill(0); // Initialize with zeros
 
     for (let i = 0; i < capacitySeries.length; i++) {
-      // Calculate average over the current 15-min slot and the next 3 (total 4 periods = 60 min)
-      // The average should be centered, not shifted.
+      // Moyenne stricte sur les 4 créneaux de 15 min de l'heure courante (i, i+1, i+2, i+3)
+      // Si on dépasse la fin du tableau, on ne complète pas avec les créneaux suivants
       let sum = 0;
       let count = 0;
-      // Calculate average over the current 15-min slot and the next 3 (total 4 periods = 60 min)
-      // This means for slot i, we average from i to i+3
-      for (let j = 0; j < 4; j++) { // Average over 4 periods: i, i+1, i+2, i+3
+      for (let j = 0; j < 4; j++) {
         const idx = i + j;
-        if (idx >= 0 && idx < capacitySeries.length) {
+        if (idx < capacitySeries.length) {
           sum += capacitySeries[idx];
           count++;
         }
       }
+      // Si on n'a pas 4 valeurs (fin de journée), on ne calcule pas la moyenne (ou on met 0)
+      averagedSeries[i] = count === 4 ? parseFloat((sum / 4).toFixed(2)) : 0;
+    }
+    return averagedSeries;
+  }
+
+  applyHourlyAverageAgents(agentsSeries) {
+    // This function applies a 4-period (60-min) rolling average on agent counts
+    // Same logic as applyHourlyAverage but specifically for agent counts
+    const averagedSeries = new Array(agentsSeries.length).fill(0);
+
+    for (let i = 0; i < agentsSeries.length; i++) {
+      let sum = 0;
+      let count = 0;
+      const usedIndices = [];
+      for (let j = 0; j < 4; j++) {
+        const idx = i + j;
+        if (idx >= 0 && idx < agentsSeries.length) {
+          sum += agentsSeries[idx];
+          count++;
+          usedIndices.push(idx);
+        }
+      }
       averagedSeries[i] = count > 0 ? parseFloat((sum / count).toFixed(2)) : 0;
+      
+      // Log détaillé pour le créneau 15h45 UTC (index 63: 15*4 + 3 = 63)
+      if (i === 63) {
+        console.log(`=== ANALYSE CRÉNEAU 15h45 UTC (index ${i}) ===`);
+        console.log(`Indices utilisés pour la moyenne: ${usedIndices.join(', ')}`);
+        console.log(`Valeurs d'agents: ${usedIndices.map(idx => agentsSeries[idx]).join(', ')}`);
+        console.log(`Somme: ${sum}, Count: ${count}, Moyenne: ${averagedSeries[i]}`);
+        
+        // Convertir les indices en heures UTC pour clarification
+        const timeSlots = usedIndices.map(idx => {
+          const hours = Math.floor(idx * 15 / 60);
+          const minutes = (idx * 15) % 60;
+          return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}`;
+        });
+        console.log(`Créneaux horaires UTC: ${timeSlots.join(', ')}`);
+      }
     }
     return averagedSeries;
   }
@@ -313,7 +350,6 @@ class CapacityCalculator {
       return { capacities: Array(96).fill(0), effectiveAgents: Array(96).fill(0) };
     }
 
-    const capacities15Min = []; // Capacities for each 15-minute slot
     const effectiveAgents15Min = []; // Effective agents for each 15-minute slot
 
     for (let i = 0; i < 96; i++) { // Iterate through 15-minute intervals of the day
@@ -357,16 +393,18 @@ class CapacityCalculator {
       const effectiveAgents = Math.max(0, agentsAtThisSlot - sivReduction);
       console.log(`Effective Agents at ${hourMinuteStr}:`, effectiveAgents); // Debug log
       
-      capacities15Min.push(this.staffingLookup(effectiveAgents));
       effectiveAgents15Min.push(effectiveAgents);
     }
 
-    // Apply hourly average to the 15-min capacities
+    // Appliquer le mapping capacité sur chaque créneau de 15 min
+    const capacities15Min = effectiveAgents15Min.map(agents => this.staffingLookup(agents));
+
+    // Appliquer la moyenne glissante sur la capacité (fenêtre de 1h)
     const averagedCapacities = this.applyHourlyAverage(capacities15Min);
 
     return {
       capacities: averagedCapacities,
-      effectiveAgents: effectiveAgents15Min // Still return 15-min effective agents if needed elsewhere
+      effectiveAgents: effectiveAgents15Min // On retourne la série des agents effectifs (non moyennés)
     };
   }
 
@@ -391,7 +429,6 @@ class CapacityCalculator {
       return { capacities: Array(96).fill(0), effectiveAgents: Array(96).fill(0) };
     }
 
-    const capacities15Min = []; // Capacities for each 15-minute slot
     const effectiveAgents15Min = []; // Effective agents for each 15-minute slot
     
     for (let i = 0; i < 96; i++) {
@@ -422,21 +459,18 @@ class CapacityCalculator {
         console.error(`ERREUR SIV: Réduction non nulle (${sivReduction}) en mode fermé!`);
       }
       
-      capacities15Min.push(this.staffingLookup(effectiveAgents));
       effectiveAgents15Min.push(effectiveAgents);
     }
 
-    // Apply hourly average to the 15-min capacities
+    // Appliquer le mapping capacité sur chaque créneau de 15 min
+    const capacities15Min = effectiveAgents15Min.map(agents => this.staffingLookup(agents));
+
+    // Appliquer la moyenne glissante sur la capacité (fenêtre de 1h)
     const averagedCapacities = this.applyHourlyAverage(capacities15Min);
-    
-    // For calculateCapacityWithSpecificGrid, we might still want effectiveAgentsHourlyAvg
-    // if it's used for display or other calculations.
-    // For now, we'll just return the averaged capacities.
-    const effectiveAgentsHourlyAvg = this.applyHourlyAverage(effectiveAgents15Min);
 
     return {
       capacities: averagedCapacities,
-      effectiveAgents: effectiveAgentsHourlyAvg // Return averaged effective agents for consistency
+      effectiveAgents: effectiveAgents15Min // On retourne la série des agents effectifs (non moyennés)
     };
   }
 }

@@ -564,12 +564,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // Parse grid key to get the actual grid data
         const dayType = selectedGridKey.substring(0, 3); // "Sem", "Sam", "Dim"
         const periodCode = selectedGridKey.substring(3); // "Cha", "Cre", "Hiv"
+        
+        console.log('dayType:', dayType);
+        console.log('periodCode:', periodCode);
+        console.log('state.grilleVacations[dayType]:', state.grilleVacations[dayType]);
+        console.log('state.grilleVacations[dayType]?.[periodCode]:', state.grilleVacations[dayType]?.[periodCode]);
+
         const gridData = state.grilleVacations[dayType]?.[periodCode];
         
         if (gridData && gridData.grid) {
+            console.log('gridData.grid found:', gridData.grid);
             state.availableAgents = capacityCalculator.getAgentsByType(gridData);
             generateAgentButtons();
             initializeDefaultSelection();
+            renderVacationHeatmap(state.selectedGrid); // Appel de la fonction pour afficher la carte de chaleur
+        } else {
+            console.error('gridData or gridData.grid is missing for selected grid:', selectedGridKey, gridData);
         }
         
         updateDashboard(false);
@@ -682,5 +692,190 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         state.customAgentSelection = { Je: [], M: [], J: [], SN: [] };
+    }
+
+    function renderVacationHeatmap(gridKey) {
+        if (!gridKey || !vacationGrids) return;
+        
+        const [dayType, periodCode] = splitGridKey(gridKey);
+        const gridData = vacationGrids[dayType]?.[periodCode]?.grid;
+        if (!gridData) return;
+        
+        // Préparer les données pour Chart.js
+        const heatmapData = prepareHeatmapData(gridData);
+        
+        // Détruire le graphique existant s'il existe
+        if (window.vacationHeatmapChart) {
+            window.vacationHeatmapChart.destroy();
+        }
+        
+        const canvas = document.getElementById('vacation-heatmap');
+        const ctx = canvas.getContext('2d');
+        
+        // Créer le graphique Chart.js avec plugin matrix
+        window.vacationHeatmapChart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Vacations',
+                    data: heatmapData.data,
+                    backgroundColor: function(context) {
+                        if (context.parsed) {
+                            return getVacationColor(context.parsed.v);
+                        }
+                        return 'rgba(0, 0, 0, 0.1)';
+                    },
+                    pointRadius: 15, // Augmenter la taille des points
+                    pointHoverRadius: 18
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                const point = context[0];
+                                const vacation = heatmapData.yLabels[point.parsed.y];
+                                return `${vacation}`;
+                            },
+                            label: function(context) {
+                                const hour = Math.floor(context.parsed.x / 4) + 4;
+                                const minutes = (context.parsed.x % 4) * 15;
+                                const timeStr = `${String(hour % 24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                                return `Début: ${timeStr} | ${getVacationTypeName(context.parsed.v)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        min: 0,
+                        max: 95, // 96 créneaux de 15min (04h00 à 04h00 J+1)
+                        ticks: {
+                            stepSize: 4, // Toutes les heures
+                            callback: function(value) {
+                                const hour = Math.floor(value / 4) + 4;
+                                return `${String(hour % 24).padStart(2, '0')}h`;
+                            },
+                            color: '#a9b1d6'
+                        },
+                        grid: {
+                            color: 'rgba(161, 170, 184, 0.2)'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        min: -0.5,
+                        max: heatmapData.yLabels.length - 0.5,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function(value) {
+                                const index = Math.round(value);
+                                return heatmapData.yLabels[index] || '';
+                            },
+                            color: '#a9b1d6'
+                        },
+                        grid: {
+                            color: 'rgba(161, 170, 184, 0.2)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function prepareHeatmapData(gridData) {
+        // Ordonner les agents selon les spécifications : Je, M, J, S, N avec NC avant les N
+        const orderedAgents = [];
+        const agentsByType = { Je: [], M: [], J: [], S: [], N: [], NC: [] };
+        
+        // Classer les agents par type
+        gridData.forEach(agent => {
+            const vacation = agent.vacation;
+            if (vacation.startsWith('Je')) {
+                agentsByType.Je.push(agent);
+            } else if (vacation.startsWith('M') || vacation === 'MC') {
+                agentsByType.M.push(agent);
+            } else if (vacation.startsWith('J') || vacation === 'JC') {
+                agentsByType.J.push(agent);
+            } else if (vacation.startsWith('S')) {
+                agentsByType.S.push(agent);
+            } else if (vacation === 'NC') {
+                agentsByType.NC.push(agent);
+            } else if (vacation.startsWith('N')) {
+                agentsByType.N.push(agent);
+            }
+        });
+        
+        // Ajouter dans l'ordre spécifié
+        orderedAgents.push(...agentsByType.Je);
+        orderedAgents.push(...agentsByType.M);
+        orderedAgents.push(...agentsByType.J);
+        orderedAgents.push(...agentsByType.S);
+        orderedAgents.push(...agentsByType.NC);
+        orderedAgents.push(...agentsByType.N);
+        
+        const yLabels = orderedAgents.map(agent => agent.vacation);
+        const data = [];
+        
+        // Générer les données pour chaque agent et chaque créneau de 15min
+        orderedAgents.forEach((agent, yIndex) => {
+            // Parcourir les créneaux de 04h00 à 04h00 J+1 (96 créneaux de 15min)
+            for (let slotIndex = 0; slotIndex < 96; slotIndex++) {
+                const hour = Math.floor(slotIndex / 4) + 4; // Heure de 4 à 27 (4h du lendemain = 28h)
+                const minutes = (slotIndex % 4) * 15;
+                const timeKey = `${String(hour % 24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+                
+                const value = agent[timeKey] || '';
+                
+                // Ajouter le point seulement s'il y a une valeur
+                if (value) { // La valeur ne doit pas être vide
+                    data.push({
+                        x: slotIndex,
+                        y: yIndex,
+                        value: value // Renommer 'v' en 'value'
+                    });
+                    console.log(`Heatmap data point: agent=${agent.vacation}, timeKey=${timeKey}, value=${value}`);
+                } else {
+                    console.log(`Skipping empty point: agent=${agent.vacation}, timeKey=${timeKey}`);
+                }
+            }
+        });
+        
+        console.log('yLabels (ordered agents):', yLabels);
+        return { data, yLabels };
+    }
+
+    function getVacationColor(value) {
+        const colors = {
+            '1': 'rgba(128, 0, 128, 0.7)',      // Violet - Actif
+            'C': 'rgba(255, 0, 0, 0.7)',        // Rouge - Chef
+            'P': 'rgba(135, 206, 235, 0.7)',    // Bleu ciel - Pause
+            'R': 'rgba(255, 165, 0, 0.7)'       // Orange - Repos
+        };
+        return colors[value] || 'rgba(0, 0, 0, 0.1)'; // Transparent par défaut
+    }
+
+    function getVacationTypeName(code) {
+        const types = {
+            '1': 'Actif',
+            'C': 'Chef',
+            'P': 'Pause',
+            'R': 'Repos'
+        };
+        return types[code] || code;
+    }
+
+    function splitGridKey(gridKey) {
+        const dayType = gridKey.substring(0, 3); // "Sem", "Sam", "Dim"
+        const periodCode = gridKey.substring(3); // "Cha", "Cre", "Hiv"
+        return [dayType, periodCode];
     }
 });

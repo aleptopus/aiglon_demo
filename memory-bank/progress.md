@@ -9,6 +9,7 @@
 - [x] Intégration des grilles de vacation CSV
 - [x] Mapping des effectifs vers capacités
 - [x] Règles SIV pour réductions d'effectifs
+- [x] Carte de chaleur des vacations (couleurs et ordre corrigés)
 
 ### Logique métier
 - [x] Détection automatique des périodes (Hiver/Chargée/Creuse)
@@ -29,10 +30,13 @@
 - [x] **Courbe en escalier** : Ajout du paramètre `stepped: true` pour un rendu sans lissage
 - [x] **Pas de 15 minutes** : Calcul sur 96 créneaux de 15 min avec moyenne glissante de 60 min
 - [x] **Élimination des valeurs nulles** : Plus de capacité à zéro avec l'effectif nominal
-- [x] **Moyenne glissante corrigée** : Application sur les capacités de 15 min, alignée sur le début du créneau.
+- [x] **Moyenne glissante corrigée** : Application sur les capacités de 15 min, alignée sur le début de la fenêtre.
 - [x] **Heures SIV corrigées** : Passage de `utcTimestamp` à `getSIVReduction`.
 - [x] **Traitement trafic en UTC** : `timeSlot` des données COHOR basé sur l'heure UTC.
 - [x] **Alignement courbe capacité** : Tentative d'alignement sur le bord gauche des histogrammes (`stepped: 'before'`).
+- [x] **Couleurs incorrectes sur la carte de chaleur** : Résolu par la correction du parsing CSV et le renommage de la propriété `v` en `value`.
+- [x] **Ordre incorrect des vacations sur la carte de chaleur** : Résolu par l'ajout d'un tri secondaire.
+- [x] **Tooltip "undefined" sur la carte de chaleur** : Résolu par le renommage de la propriété `v` en `value`.
 
 ## ✅ Résolu
 
@@ -66,21 +70,28 @@
   - **Problème** : Décalage des données COHOR par rapport aux offsets spécifiés.
   - **Solution** : Application des offsets de -24 min (arrivée) et +11 min (départ) directement au `timeSlot` des données COHOR dans `script.js`.
 
+- [x] **Problèmes d'affichage de la carte de chaleur** :
+  - **Problème** : Couleurs incorrectes et ordre des vacations non respecté.
+  - **Solution** : Correction du parsing CSV pour les valeurs de vacation, renommage de la propriété `v` en `value` dans les données de la heatmap et les callbacks de Chart.js, et ajout d'un tri secondaire pour les agents.
+
 ## 📋 Prochaines étapes
 
-1. **Vérifier l'application des règles SIV :**
+1. **Validation du calcul de la capacité :**
+   - Valider le calcul de la capacité pour toutes les périodes (Semaine Creuse, Hiver, etc.) et toutes les hypothèses VFR (faible, moyen, fort). Le calcul est validé pour "SemCha".
+
+2. **Vérifier l'application des règles SIV :**
    - S'assurer que les réductions SIV sont correctement appliquées pour toutes les hypothèses (faible, moyen, fort), et pas seulement pour "fermé".
    - Analyser les données de `sivRules.js` si les réductions attendues ne sont pas appliquées.
 
-2. **Logique des vacations de nuit (N) :**
+3. **Logique des vacations de nuit (N) :**
    - Implémenter la logique spécifique pour les vacations de nuit (N) qui s'appliquent au J+1 et sont obligatoires.
 
-3. **Nettoyage et optimisation** :
+4. **Nettoyage et optimisation** :
    - Supprimer les logs de débogage restants
    - Optimiser les performances si nécessaire
    - Finaliser la documentation
    
-4. **Améliorations de l'interface utilisateur (UI) :**
+5. **Améliorations de l'interface utilisateur (UI) :**
    - Filtre de date pour afficher une seule journée si date de début et de fin sont égales.
    - Supprimer les boutons des vacations obligatoires (MC, JC, NC, N) et les gérer en interne.
    - Ajouter un bouton bascule "toggle button" dans le graphique pour passer de l'heure locale à l'heure UTC.
@@ -100,6 +111,7 @@
 - ✅ Prise en compte des contraintes SIV
 - ✅ Affichage graphique des résultats
 - ✅ Résolution complète des problèmes de décalage horaire et d'alignement des courbes.
+- ✅ Carte de chaleur des vacations fonctionnelle avec couleurs et ordre corrects.
 
 ## 📊 État actuel
 
