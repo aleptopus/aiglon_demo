@@ -3,15 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const elements = {
         csvFile: document.getElementById('csvFileInput'),
         jsonFile: document.getElementById('jsonFileInput'),
-        grilleFile: document.getElementById('grilleFileInput'),
-        compoFile: document.getElementById('compoFileInput'),
         csvName: document.getElementById('csvFileName'),
         jsonName: document.getElementById('jsonFileName'),
-        grilleName: document.getElementById('grilleFileName'),
-        compoName: document.getElementById('compoFileName'),
-        jsonButton: document.querySelector('button[onclick*="jsonFileInput"]'),
-        grilleButton: document.querySelector('button[onclick*="grilleFileInput"]'),
-        compoButton: document.querySelector('button[onclick*="compoFileInput"]'),
         initialMsg: document.getElementById('initialMessage'),
         dashboard: document.getElementById('dashboardContent'),
         dateStartInput: document.getElementById('dateStartInput'),
@@ -28,8 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
         summaryTableHead: document.querySelector('#summaryTable thead'),
         summaryTableBody: document.querySelector('#summaryTable tbody'),
         capacityControlsCard: document.getElementById('capacityControlsCard'),
-        periodSelect: document.getElementById('periodSelect'), // New: Period select
-        sivSelect: document.getElementById('sivSelect'),       // New: SIV select
+        periodSelect: document.getElementById('periodSelect'),
+        sivSelect: document.getElementById('sivSelect'),
     };
 
     console.log('vacationGrids at init:', vacationGrids);
@@ -78,11 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.periodSelect.addEventListener('change', handleGridSelection);
         document.getElementById('toggleTimezoneBtn').addEventListener('click', toggleTimezone);
 
-        console.log('Chart Canvas Context:', elements.chartCanvas);
-        console.log('Chart Canvas Width:', elements.chartCanvas.canvas.width);
-        console.log('Chart Canvas Height:', elements.chartCanvas.canvas.height);
-
     function handleCohorFile(event) {
+        console.log("handleCohorFile called");
         const file = event.target.files[0];
         if (!file) return;
         elements.csvName.textContent = file.name;
@@ -99,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleTmaFile(event) {
+        console.log("handleTmaFile called");
         const file = event.target.files[0];
         if (!file) return;
         elements.jsonName.textContent = file.name;
@@ -114,7 +105,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeDashboard() {
         elements.initialMsg.classList.add('hidden');
         elements.dashboard.classList.remove('hidden');
-        elements.jsonButton.disabled = false;
         [elements.dateStartInput, elements.dateEndInput].forEach(el => el.disabled = false);
 
         combineAllData();
@@ -498,8 +488,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const totals = data.reduce((acc, d) => { acc.isArrival += d.isArrival; acc.isDeparture += d.isDeparture; return acc; }, { isArrival: 0, isDeparture: 0, tma: 0 });
         const tmaTracker = new Set();
         data.forEach(d => { if (d.tma > 0 && !tmaTracker.has(`${d.date.toDateString()}-${d.timeSlot}`)) { totals.tma += d.tma; tmaTracker.add(`${d.date.toDateString()}-${d.timeSlot}`); } });
+        
         const getAvg = (key) => (totals[key] / numDays).toFixed(1);
-        elements.avgDep.textContent = getAvg('isDeparture'); elements.avgArr.textContent = getAvg('isArrival');
+        
+        elements.avgDep.textContent = getAvg('isDeparture');
+        elements.avgArr.textContent = getAvg('isArrival');
         elements.avgTma.textContent = getAvg('tma');
         elements.avgTotal.textContent = (parseFloat(elements.avgDep.textContent) + parseFloat(elements.avgArr.textContent) + parseFloat(elements.avgTma.textContent)).toFixed(1);
     }
@@ -577,7 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.availableAgents = capacityCalculator.getAgentsByType(gridData);
             generateAgentButtons();
             initializeDefaultSelection();
-            renderVacationHeatmap(state.selectedGrid); // Appel de la fonction pour afficher la carte de chaleur
+            renderHeatmapD3(state.selectedGrid); // Appel de la fonction pour afficher la carte de chaleur D3.js
         } else {
             console.error('gridData or gridData.grid is missing for selected grid:', selectedGridKey, gridData);
         }
@@ -598,26 +591,75 @@ document.addEventListener('DOMContentLoaded', () => {
             if (container) container.innerHTML = '';
         });
         
-        // Generate buttons for each agent type, excluding fixed ones
-        ['Je', 'M', 'J', 'SN'].forEach(type => { // Explicitly iterate over types that have selectable buttons
-            const container = buttonContainers[type];
-            if (!container) return;
-            
-            const agents = state.availableAgents[type];
-            const maxAgents = type === 'Je' ? 3 : 8; // Max agents to display for selection
-            
-            // Filter out fixed agents (MC, JC, NC) if they somehow appear here, though they should be in their own categories
-            const selectableAgents = agents.filter(agent => !['MC', 'JC', 'NC'].includes(agent.vacation));
+        // Helper to create a button or a styled span
+        const createAgentElement = (agent, type, isSelectable = true, isInitiallySelected = false) => {
+            const element = document.createElement(isSelectable ? 'button' : 'span');
+            element.className = 'agent-button'; // Apply button styling
+            if (!isSelectable) element.classList.add('inactive-agent-button'); // Add inactive class for non-selectable elements
+            if (isInitiallySelected) element.classList.add('selected'); // Add selected class if initially selected
+            element.textContent = agent.vacation;
+            element.dataset.agentType = type;
+            element.dataset.agentId = agent.vacation;
+            if (isSelectable) {
+                element.addEventListener('click', () => toggleAgentSelection(type, agent.vacation, element));
+            }
+            return element;
+        };
 
-            selectableAgents.slice(0, maxAgents).forEach((agent, index) => {
-                const button = document.createElement('button');
-                button.className = 'agent-button';
-                button.textContent = agent.vacation;
-                button.dataset.agentType = type;
-                button.dataset.agentId = agent.vacation;
-                button.addEventListener('click', () => toggleAgentSelection(type, agent.vacation, button));
-                container.appendChild(button);
-            });
+        // Generate buttons for Je
+        state.availableAgents.Je.slice(0, 3).forEach(agent => {
+            buttonContainers.Je.appendChild(createAgentElement(agent, 'Je'));
+        });
+
+        // Generate buttons for M (MC first, then M agents)
+        const mAgents = state.availableAgents.M.filter(agent => agent.vacation !== 'MC');
+        const mcAgent = state.availableAgents.M.find(agent => agent.vacation === 'MC');
+        if (mcAgent) {
+            // Create a span styled as selected (orange) but not inactive (not grey) for MC
+            const mcSpan = document.createElement('span');
+            mcSpan.className = 'agent-button selected';
+            mcSpan.textContent = mcAgent.vacation;
+            buttonContainers.M.appendChild(mcSpan);
+        }
+        mAgents.slice(0, 9 - (mcAgent ? 1 : 0)).forEach(agent => { // 9 total M agents including MC
+            buttonContainers.M.appendChild(createAgentElement(agent, 'M'));
+        });
+
+        // Generate buttons for J (JC first, then J agents)
+        const jAgents = state.availableAgents.J.filter(agent => agent.vacation !== 'JC');
+        const jcAgent = state.availableAgents.J.find(agent => agent.vacation === 'JC');
+        if (jcAgent) {
+            // Create a span styled as selected (orange) but not inactive for JC
+            const jcSpan = document.createElement('span');
+            jcSpan.className = 'agent-button selected';
+            jcSpan.textContent = jcAgent.vacation;
+            buttonContainers.J.appendChild(jcSpan);
+        }
+        jAgents.slice(0, 8 - (jcAgent ? 1 : 0)).forEach(agent => { // 8 total J agents including JC
+            buttonContainers.J.appendChild(createAgentElement(agent, 'J'));
+        });
+
+        // Generate buttons for SN (NC first, then N agents, then S agents)
+        const snAgents = state.availableAgents.SN.filter(agent => agent.vacation !== 'NC' && !agent.vacation.startsWith('N'));
+        const ncAgent = state.availableAgents.SN.find(agent => agent.vacation === 'NC');
+        const nAgents = state.availableAgents.SN.filter(agent => agent.vacation.startsWith('N'));
+
+        if (ncAgent) {
+            // Create a span styled as selected (orange) but not inactive for NC
+            const ncSpan = document.createElement('span');
+            ncSpan.className = 'agent-button selected';
+            ncSpan.textContent = ncAgent.vacation;
+            buttonContainers.SN.appendChild(ncSpan);
+        }
+        nAgents.slice(0, 2).forEach(agent => { // 2 N agents are not selectable
+            // Create spans styled as selected and inactive for N agents
+            const nSpan = document.createElement('span');
+            nSpan.className = 'agent-button selected inactive-agent-button';
+            nSpan.textContent = agent.vacation;
+            buttonContainers.SN.appendChild(nSpan);
+        });
+        snAgents.slice(0, 8 - (ncAgent ? 1 : 0) - 2).forEach(agent => { // 8 total SN agents including NC and 2 N
+            buttonContainers.SN.appendChild(createAgentElement(agent, 'SN'));
         });
     }
     
@@ -625,22 +667,43 @@ document.addEventListener('DOMContentLoaded', () => {
         // Initialize with default selection (3 Je + 8 M + 8 J + 8 SN)
         state.customAgentSelection = { Je: [], M: [], J: [], SN: [] };
         
-        // Add fixed agents to selection first
-        if (state.availableAgents.MC) state.customAgentSelection.M.push(...state.availableAgents.MC.map(a => a.vacation));
-        if (state.availableAgents.JC) state.customAgentSelection.J.push(...state.availableAgents.JC.map(a => a.vacation));
-        if (state.availableAgents.NC) state.customAgentSelection.SN.push(...state.availableAgents.NC.map(a => a.vacation));
+        // Add fixed agents to selection first (MC, JC, NC, N)
+        const fixedAgents = [];
+        const mcAgent = state.availableAgents.M.find(agent => agent.vacation === 'MC');
+        if (mcAgent) fixedAgents.push(mcAgent);
+        const jcAgent = state.availableAgents.J.find(agent => agent.vacation === 'JC');
+        if (jcAgent) fixedAgents.push(jcAgent);
+        const ncAgent = state.availableAgents.SN.find(agent => agent.vacation === 'NC');
+        if (ncAgent) fixedAgents.push(ncAgent);
+        const nAgents = state.availableAgents.SN.filter(agent => agent.vacation.startsWith('N'));
+        fixedAgents.push(...nAgents.slice(0, 2)); // Only 2 N agents are fixed
 
+        fixedAgents.forEach(agent => {
+            if (agent.vacation.startsWith('M') || agent.vacation === 'MC') {
+                if (!state.customAgentSelection.M.includes(agent.vacation)) state.customAgentSelection.M.push(agent.vacation);
+            } else if (agent.vacation.startsWith('J') || agent.vacation === 'JC') {
+                if (!state.customAgentSelection.J.includes(agent.vacation)) state.customAgentSelection.J.push(agent.vacation);
+            } else if (agent.vacation.startsWith('S') || agent.vacation.startsWith('N') || agent.vacation === 'NC') {
+                if (!state.customAgentSelection.SN.includes(agent.vacation)) state.customAgentSelection.SN.push(agent.vacation);
+            }
+        });
+
+        // Ensure fixed agents are marked as selected in the UI
+        updateAgentButtonStates(); // Call this here to apply 'selected' class to fixed agents
+
+        // Add selectable agents up to maxAgents
         ['Je', 'M', 'J', 'SN'].forEach(type => {
             const maxAgents = type === 'Je' ? 3 : 8;
-            // Filter out fixed agents from the slice, as they are already handled
-            const agentsToSelect = state.availableAgents[type].filter(agent => !['MC', 'JC', 'NC'].includes(agent.vacation));
-            
-            // Adjust slice based on how many fixed agents are already included in the type's count
             const currentCount = state.customAgentSelection[type].length;
             const remainingToSelect = maxAgents - currentCount;
 
             if (remainingToSelect > 0) {
-                agentsToSelect.slice(0, remainingToSelect).forEach(agent => {
+                const selectableAgents = state.availableAgents[type].filter(agent => 
+                    !state.customAgentSelection[type].includes(agent.vacation) &&
+                    !['MC', 'JC', 'NC'].includes(agent.vacation) && // Exclude fixed agents
+                    !agent.vacation.startsWith('N') // Exclude N agents (already handled if fixed)
+                );
+                selectableAgents.slice(0, remainingToSelect).forEach(agent => {
                     state.customAgentSelection[type].push(agent.vacation);
                 });
             }
@@ -673,6 +736,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (state.customAgentSelection[type] && state.customAgentSelection[type].includes(agentId)) {
                 button.classList.add('selected');
+                // If element is inactive-agent-button, ensure selected style applies
+                if (button.classList.contains('inactive-agent-button')) {
+                    button.style.backgroundColor = 'var(--accent-orange)';
+                    button.style.color = 'var(--background)';
+                    button.style.cursor = 'default';
+                }
             } else {
                 button.classList.remove('selected');
             }
@@ -694,118 +763,47 @@ document.addEventListener('DOMContentLoaded', () => {
         state.customAgentSelection = { Je: [], M: [], J: [], SN: [] };
     }
 
-    function renderVacationHeatmap(gridKey) {
-        if (!gridKey || !vacationGrids) return;
-        
-        const [dayType, periodCode] = splitGridKey(gridKey);
-        const gridData = vacationGrids[dayType]?.[periodCode]?.grid;
-        if (!gridData) return;
-        
-        // Préparer les données pour Chart.js
-        const heatmapData = prepareHeatmapData(gridData);
-        
-        // Détruire le graphique existant s'il existe
-        if (window.vacationHeatmapChart) {
-            window.vacationHeatmapChart.destroy();
-        }
-        
-        const canvas = document.getElementById('vacation-heatmap');
-        const ctx = canvas.getContext('2d');
-        
-        // Créer le graphique Chart.js avec plugin matrix
-        window.vacationHeatmapChart = new Chart(ctx, {
-            type: 'scatter',
-            data: {
-                datasets: [{
-                    label: 'Vacations',
-                    data: heatmapData.data,
-                    backgroundColor: function(context) {
-                        if (context.parsed) {
-                            return getVacationColor(context.parsed.v);
-                        }
-                        return 'rgba(0, 0, 0, 0.1)';
-                    },
-                    pointRadius: 15, // Augmenter la taille des points
-                    pointHoverRadius: 18
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            title: function(context) {
-                                const point = context[0];
-                                const vacation = heatmapData.yLabels[point.parsed.y];
-                                return `${vacation}`;
-                            },
-                            label: function(context) {
-                                const hour = Math.floor(context.parsed.x / 4) + 4;
-                                const minutes = (context.parsed.x % 4) * 15;
-                                const timeStr = `${String(hour % 24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-                                return `Début: ${timeStr} | ${getVacationTypeName(context.parsed.v)}`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                        min: 0,
-                        max: 95, // 96 créneaux de 15min (04h00 à 04h00 J+1)
-                        ticks: {
-                            stepSize: 4, // Toutes les heures
-                            callback: function(value) {
-                                const hour = Math.floor(value / 4) + 4;
-                                return `${String(hour % 24).padStart(2, '0')}h`;
-                            },
-                            color: '#a9b1d6'
-                        },
-                        grid: {
-                            color: 'rgba(161, 170, 184, 0.2)'
-                        }
-                    },
-                    y: {
-                        type: 'linear',
-                        min: -0.5,
-                        max: heatmapData.yLabels.length - 0.5,
-                        ticks: {
-                            stepSize: 1,
-                            callback: function(value) {
-                                const index = Math.round(value);
-                                return heatmapData.yLabels[index] || '';
-                            },
-                            color: '#a9b1d6'
-                        },
-                        grid: {
-                            color: 'rgba(161, 170, 184, 0.2)'
-                        }
-                    }
-                }
-            }
-        });
+    function splitGridKey(gridKey) {
+        const dayType = gridKey.substring(0, 3); // "Sem", "Sam", "Dim"
+        const periodCode = gridKey.substring(3); // "Cha", "Cre", "Hiv"
+        return [dayType, periodCode];
     }
 
-    function prepareHeatmapData(gridData) {
-        // Ordonner les agents selon les spécifications : Je, M, J, S, N avec NC avant les N
+    // --- D3.js Heatmap ---
+    function renderHeatmapD3(gridKey) {
+        const container = d3.select("#d3-heatmap-container");
+        container.html(""); // Clear previous heatmap
+
+        if (!gridKey || !vacationGrids) {
+            container.append("p").text("Veuillez sélectionner une grille de vacation pour afficher la carte de chaleur.");
+            return;
+        }
+
+        const [dayType, periodCode] = splitGridKey(gridKey);
+        const gridData = vacationGrids[dayType]?.[periodCode]?.grid;
+
+        if (!gridData || gridData.length === 0) {
+            container.append("p").text(`Aucune donnée de grille trouvée pour ${gridKey}.`);
+            return;
+        }
+
+        // 1. Préparer les données et trier les vacations
         const orderedAgents = [];
-        const agentsByType = { Je: [], M: [], J: [], S: [], N: [], NC: [] };
-        
-        // Classer les agents par type
+        const agentsByType = { Je: [], MC: [], M: [], JC: [], J: [], S: [], NC: [], N: [] };
+
         gridData.forEach(agent => {
             const vacation = agent.vacation;
             if (vacation.startsWith('Je')) {
                 agentsByType.Je.push(agent);
-            } else if (vacation.startsWith('M') || vacation === 'MC') {
+            } else if (vacation === 'MC') {
+                agentsByType.MC.push(agent);
+            } else if (vacation.startsWith('M')) {
                 agentsByType.M.push(agent);
-            } else if (vacation.startsWith('J') || vacation === 'JC') {
+            } else if (vacation === 'JC') {
+                agentsByType.JC.push(agent);
+            } else if (vacation.startsWith('J')) {
                 agentsByType.J.push(agent);
-            } else if (vacation.startsWith('S')) {
+            } else if (vacation.startsWith('S')) { // Only S, not SN
                 agentsByType.S.push(agent);
             } else if (vacation === 'NC') {
                 agentsByType.NC.push(agent);
@@ -813,69 +811,170 @@ document.addEventListener('DOMContentLoaded', () => {
                 agentsByType.N.push(agent);
             }
         });
-        
-        // Ajouter dans l'ordre spécifié
+
+        // Sort each group alphabetically by vacation name
+        Object.keys(agentsByType).forEach(key => {
+            agentsByType[key].sort((a, b) => a.vacation.localeCompare(b.vacation));
+        });
+
+        // Add in specified order
         orderedAgents.push(...agentsByType.Je);
+        orderedAgents.push(...agentsByType.MC); // MC before M
         orderedAgents.push(...agentsByType.M);
+        orderedAgents.push(...agentsByType.JC); // JC before J
         orderedAgents.push(...agentsByType.J);
         orderedAgents.push(...agentsByType.S);
         orderedAgents.push(...agentsByType.NC);
         orderedAgents.push(...agentsByType.N);
-        
+
         const yLabels = orderedAgents.map(agent => agent.vacation);
-        const data = [];
-        
-        // Générer les données pour chaque agent et chaque créneau de 15min
+        const heatmapData = [];
+
         orderedAgents.forEach((agent, yIndex) => {
-            // Parcourir les créneaux de 04h00 à 04h00 J+1 (96 créneaux de 15min)
             for (let slotIndex = 0; slotIndex < 96; slotIndex++) {
                 const hour = Math.floor(slotIndex / 4) + 4; // Heure de 4 à 27 (4h du lendemain = 28h)
                 const minutes = (slotIndex % 4) * 15;
                 const timeKey = `${String(hour % 24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
-                
                 const value = agent[timeKey] || '';
                 
-                // Ajouter le point seulement s'il y a une valeur
-                if (value) { // La valeur ne doit pas être vide
-                    data.push({
-                        x: slotIndex,
-                        y: yIndex,
-                        value: value // Renommer 'v' en 'value'
-                    });
-                    console.log(`Heatmap data point: agent=${agent.vacation}, timeKey=${timeKey}, value=${value}`);
-                } else {
-                    console.log(`Skipping empty point: agent=${agent.vacation}, timeKey=${timeKey}`);
-                }
+                heatmapData.push({
+                    x: slotIndex,
+                    y: yIndex,
+                    value: value,
+                    vacationName: agent.vacation,
+                    time: timeKey
+                });
             }
         });
-        
-        console.log('yLabels (ordered agents):', yLabels);
-        return { data, yLabels };
-    }
 
-    function getVacationColor(value) {
-        const colors = {
-            '1': 'rgba(128, 0, 128, 0.7)',      // Violet - Actif
-            'C': 'rgba(255, 0, 0, 0.7)',        // Rouge - Chef
-            'P': 'rgba(135, 206, 235, 0.7)',    // Bleu ciel - Pause
-            'R': 'rgba(255, 165, 0, 0.7)'       // Orange - Repos
+        // 2. Configuration du SVG et des dimensions
+        const margin = { top: 50, right: 20, bottom: 50, left: 80 };
+        const cellSize = 15; // Taille d'une cellule carrée
+        const width = 96 * cellSize + margin.left + margin.right;
+        const height = yLabels.length * cellSize + margin.top + margin.bottom;
+
+        // Mapping des codes de grille vers des noms lisibles
+        const gridNameMapping = {
+            "SemCha": "Semaine Chargée",
+            "SamCha": "Samedi Chargé",
+            "DimCha": "Dimanche Chargée",
+            "SemCre": "Semaine Creuse",
+            "SamCre": "Samedi Creux",
+            "DimCre": "Dimanche Creux",
+            "SemHiv": "Semaine Hiver",
+            "SamHiv": "Samedi Hiver",
+            "DimHiv": "Dimanche Hiver"
         };
-        return colors[value] || 'rgba(0, 0, 0, 0.1)'; // Transparent par défaut
+        const displayGridName = gridNameMapping[gridKey] || gridKey;
+
+        container.append("h2").text(`Détails des vacations de la période ${displayGridName}`).attr("class", "card-title");
+
+        const svg = container.append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // 3. Échelles
+        const x = d3.scaleBand()
+            .range([0, 96 * cellSize])
+            .domain(d3.range(96))
+            .paddingInner(0.05);
+
+        const y = d3.scaleBand()
+            .range([0, yLabels.length * cellSize])
+            .domain(yLabels)
+            .paddingInner(0.05);
+
+        const colorScale = (value) => {
+            switch (value) {
+                case '1': return '#800080'; // Violet - Actif (opaque)
+                case 'C': return '#FF0000';   // Rouge - Chef (opaque)
+                case 'P': return '#87CEEB'; // Bleu ciel - Pause (opaque)
+                case 'R': return '#FFA500'; // Orange - Repos (opaque)
+                default: return 'rgba(0, 0, 0, 0)'; // Transparent
+            }
+        };
+
+        // 4. Création des cellules
+        svg.selectAll(".cell")
+            .data(heatmapData)
+            .enter().append("rect")
+            .attr("class", "cell")
+            .attr("x", d => x(d.x))
+            .attr("y", d => y(d.vacationName))
+            .attr("width", x.bandwidth())
+            .attr("height", y.bandwidth())
+            .style("fill", d => colorScale(d.value))
+            .style("stroke", "rgba(0,0,0,0.1)")
+            .style("stroke-width", 0.5)
+            .on("mouseover", function(event, d) {
+                tooltip.style("opacity", 1)
+                    .html(`Vacation: ${d.vacationName}<br>Heure: ${d.time}<br>Statut: ${getVacationStatusName(d.value)}`)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+            })
+            .on("mouseout", function() {
+                tooltip.style("opacity", 0);
+            });
+
+        // 5. Axes
+        const xAxis = d3.axisBottom(x)
+            .tickValues(d3.range(0, 96, 4)) // Toutes les heures (0, 4, 8, ...)
+            .tickFormat(d => {
+                const hour = Math.floor(d / 4) + 4; // Convertir l'index en heure (décalage de 4h)
+                return `${String(hour % 24).padStart(2, '0')}h`;
+            });
+
+        const yAxis = d3.axisLeft(y);
+
+        svg.append("g")
+            .attr("class", "x-axis")
+            .attr("transform", `translate(0, ${yLabels.length * cellSize})`)
+            .call(xAxis);
+
+        svg.append("g")
+            .attr("class", "y-axis")
+            .call(yAxis);
+
+        // Style des axes
+        svg.selectAll(".x-axis text")
+            .style("fill", "var(--text-secondary)");
+        svg.selectAll(".y-axis text")
+            .style("fill", "var(--text-secondary)");
+        svg.selectAll(".x-axis path, .x-axis line, .y-axis path, .y-axis line")
+            .style("stroke", "var(--text-secondary)");
+
+        // 6. Tooltip
+        const tooltip = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+
+        // 7. Légende
+        const legendData = [
+            { value: '1', label: 'Actif (1)', color: 'rgba(128, 0, 128, 0.7)' },
+            { value: 'C', label: 'Chef (C)', color: 'rgba(255, 0, 0, 0.7)' },
+            { value: 'P', label: 'Pause (P)', color: 'rgba(135, 206, 235, 0.7)' },
+            { value: 'R', label: 'Repos (R)', color: 'rgba(255, 165, 0, 0.7)' }
+        ];
+
+        const legend = container.append("div")
+            .attr("class", "heatmap-legend-d3");
+
+        legend.selectAll(".legend-item")
+            .data(legendData)
+            .enter().append("div")
+            .attr("class", "legend-item")
+            .html(d => `<span class="legend-color" style="background-color: ${d.color};"></span><span>${d.label}</span>`);
     }
 
-    function getVacationTypeName(code) {
+    function getVacationStatusName(code) {
         const types = {
             '1': 'Actif',
             'C': 'Chef',
             'P': 'Pause',
             'R': 'Repos'
         };
-        return types[code] || code;
-    }
-
-    function splitGridKey(gridKey) {
-        const dayType = gridKey.substring(0, 3); // "Sem", "Sam", "Dim"
-        const periodCode = gridKey.substring(3); // "Cha", "Cre", "Hiv"
-        return [dayType, periodCode];
+        return types[code] || 'Vide';
     }
 });

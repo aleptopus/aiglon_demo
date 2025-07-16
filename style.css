@@ -21,7 +21,7 @@ body { background-color: var(--background); color: var(--text-primary); font-fam
     background-position: center; background-size: 45%; opacity: 0.2; z-index: -1;
 }
 
-.container { max-width: 1200px; margin: 0 auto; }
+.container { max-width: 90%; margin: 0 auto; }
 header { text-align: center; margin-bottom: 2.5rem; }
 .main-title { font-size: 3.5rem; font-weight: 800; margin: 0; color: var(--accent-orange); letter-spacing: 0.1em; }
 header p { color: var(--text-secondary); font-size: 1rem; margin-top: 0.5rem; }
@@ -82,9 +82,49 @@ td { transition: background-color 0.3s ease; }
 .max-value { font-weight: 800; color: #fff; text-shadow: 0 0 5px #000; }
 
 /* --- Capacity Controls --- */
-.capacity-controls-simplified { display: flex; flex-direction: column; gap: 2rem; }
-.control-group label { display: block; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.75rem; }
-.control-group:last-child { align-self: flex-start; max-width: 300px; }
+.capacity-controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem; /* Espace entre les groupes de boutons */
+    align-items: flex-start; /* Aligner les éléments en haut */
+    justify-content: flex-start;
+    margin-bottom: 1rem;
+}
+
+.capacity-controls-row:last-child {
+    margin-bottom: 0;
+}
+
+.control-group {
+    /* Pour la liste déroulante SIV */
+    flex-shrink: 0; /* Ne pas réduire la taille */
+    min-width: 150px; /* Largeur minimale pour la lisibilité */
+    /* Ajustement pour aligner plus haut */
+    margin-top: -0.5rem; /* Décaler légèrement vers le haut */
+}
+
+.control-group label {
+    display: block;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+}
+
+/* Ajustement pour les toggle-group directement dans capacity-controls-row */
+.capacity-controls-row .toggle-group {
+    flex-grow: 1; /* Permet aux groupes de boutons de prendre l'espace disponible */
+    justify-content: flex-start; /* Aligner les boutons au début */
+    gap: 0.5rem;
+    /* Assurer que les toggle-group s'alignent avec le haut du control-group */
+    margin-top: 0;
+}
+
+/* Supprimer les styles spécifiques qui ne sont plus nécessaires */
+/* .capacity-controls-simplified { display: flex; flex-direction: column; gap: 2rem; } */
+/* .control-group:last-child { align-self: flex-start; max-width: 300px; } */
+/* .vacation-controls { display: flex; flex-direction: column; gap: 1rem; } */
+/* .filter-group-horizontal { display: flex; flex-direction: column; gap: 0.5rem; } */
+/* .filter-group-horizontal > label { font-weight: 500; color: var(--text-secondary); font-size: 0.9rem; } */
 
 
 /* --- Agent Selection Buttons --- */
@@ -92,24 +132,72 @@ td { transition: background-color 0.3s ease; }
 .filter-group-horizontal { display: flex; flex-direction: column; gap: 0.5rem; }
 .filter-group-horizontal > label { font-weight: 500; color: var(--text-secondary); font-size: 0.9rem; }
 
-/* --- Vacation Heatmap --- */
-.heatmap-container {
-    height: 400px;
-    margin: 1.5rem 0;
-    position: relative;
+/* --- D3.js Heatmap --- */
+#d3-heatmap-container {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background-color: var(--card-background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow-x: auto; /* Permet le défilement horizontal si la carte est trop large */
+    min-height: 650px; /* Hauteur minimale pour être plus gros */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-.heatmap-legend {
+#d3-heatmap-container h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+
+#d3-heatmap-container svg {
+    background-color: var(--background);
+    border-radius: var(--radius);
+    overflow: visible; /* Permet aux labels des axes de ne pas être coupés */
+}
+
+.cell {
+    /* Styles par défaut pour les cellules, la couleur est définie par JS */
+    stroke: rgba(0,0,0,0.1);
+    stroke-width: 0.5px;
+}
+
+.x-axis text, .y-axis text {
+    font-size: 10px;
+    fill: var(--text-secondary);
+}
+
+.x-axis line, .y-axis line, .x-axis path, .y-axis path {
+    stroke: var(--border);
+}
+
+.tooltip {
+    position: absolute;
+    text-align: center;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    pointer-events: none;
+    font-size: 12px;
+    line-height: 1.4;
+    z-index: 1000; /* Assure que le tooltip est au-dessus des autres éléments */
+}
+
+.heatmap-legend-d3 {
     display: flex;
     justify-content: center;
     gap: 2rem;
-    margin-top: 1rem;
+    margin-top: 1.5rem;
     padding: 1rem;
     background: rgba(0,0,0,0.1);
     border-radius: var(--radius);
 }
 
-.legend-item {
+.heatmap-legend-d3 .legend-item {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -117,7 +205,7 @@ td { transition: background-color 0.3s ease; }
     color: var(--text-secondary);
 }
 
-.legend-color {
+.heatmap-legend-d3 .legend-color {
     width: 16px;
     height: 16px;
     border-radius: 3px;
@@ -151,6 +239,18 @@ td { transition: background-color 0.3s ease; }
 
 .agent-button.selected:hover {
     background-color: var(--accent-orange-hover);
+}
+
+.agent-button.inactive-agent-button {
+    background-color: var(--border);
+    color: var(--text-secondary);
+    cursor: default;
+    opacity: 0.7;
+}
+
+.agent-button.inactive-agent-button:hover {
+    background-color: var(--border); /* No change on hover for inactive */
+    color: var(--text-secondary); /* No change on hover for inactive */
 }
 
 .select-dropdown {

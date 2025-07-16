@@ -1,43 +1,84 @@
 # État d'avancement du projet Aiglon
+# État d'avancement du projet Aiglon
 
 ## ✅ Complété
 
 ### Structure de base
-- [x] Interface utilisateur HTML/CSS fonctionnelle
-- [x] Sélecteur de date avec calendrier
-- [x] Graphique Chart.js pour l'affichage des capacités
-- [x] Intégration des grilles de vacation CSV
-- [x] Mapping des effectifs vers capacités
-- [x] Règles SIV pour réductions d'effectifs
-- [x] Carte de chaleur des vacations (couleurs et ordre corrigés)
+- Interface utilisateur HTML/CSS fonctionnelle
+- Sélecteur de date avec calendrier
+- Graphique Chart.js pour l'affichage des capacités
+- Intégration des grilles de vacation CSV
+- Mapping des effectifs vers capacités
+- Règles SIV pour réductions d'effectifs
+- Carte de chaleur des vacations (couleurs et ordre corrigés)
+- Nouvelle carte de chaleur D3.js "Détails des vacations" fonctionnelle
 
 ### Logique métier
-- [x] Détection automatique des périodes (Hiver/Chargée/Creuse)
-- [x] Classification des jours (Semaine/Samedi/Dimanche)
-- [x] Calcul des capacités par tranches de 15 minutes
-- [x] Application des réductions SIV
-- [x] Moyenne mobile sur 1 heure (décalée de 45 min)
+- Détection automatique des périodes (Hiver/Chargée/Creuse)
+- Classification des jours (Semaine/Samedi/Dimanche)
+- Calcul des capacités par tranches de 15 minutes
+- Application des réductions SIV
+- Moyenne mobile sur 1 heure (décalée de 45 min)
+- Gestion des priorités agents corrigée
+- Sélection d'agents fonctionnelle
+- Correction des décalages horaires et alignement des courbes
 
 ### Corrections récentes
-- [x] **Parsing CSV corrigé** : Normalisation des en-têtes et gestion des accents
-- [x] **Priorités d'agents corrigées** : La priorité est maintenant l'ordre d'apparition dans le fichier
-- [x] **Sélection d'agents fonctionnelle** : Les agents non-chefs sont correctement sélectionnés
-- [x] **Affichage des courbes** : Les calculs de capacité génèrent maintenant des valeurs non nulles
-- [x] **Comptage agents actifs corrigé** : Seuls les agents avec '1' comptent (pas les chefs 'C')
-- [x] **Fuseau horaire SIV corrigé** : Les règles SIV sont maintenant appliquées en UTC
-- [x] **Interface de sélection d'agents** : Ajout de boutons pour sélectionner/désélectionner les agents
-- [x] **Effectif nominal corrigé** : Passage de 7 SN à 8 SN (3 Je + 8 M + 8 J + 8 SN)
-- [x] **Courbe en escalier** : Ajout du paramètre `stepped: true` pour un rendu sans lissage
-- [x] **Pas de 15 minutes** : Calcul sur 96 créneaux de 15 min avec moyenne glissante de 60 min
-- [x] **Élimination des valeurs nulles** : Plus de capacité à zéro avec l'effectif nominal
-- [x] **Moyenne glissante corrigée** : Application sur les capacités de 15 min, alignée sur le début de la fenêtre.
-- [x] **Heures SIV corrigées** : Passage de `utcTimestamp` à `getSIVReduction`.
-- [x] **Traitement trafic en UTC** : `timeSlot` des données COHOR basé sur l'heure UTC.
-- [x] **Alignement courbe capacité** : Tentative d'alignement sur le bord gauche des histogrammes (`stepped: 'before'`).
-- [x] **Couleurs incorrectes sur la carte de chaleur** : Résolu par la correction du parsing CSV et le renommage de la propriété `v` en `value`.
-- [x] **Ordre incorrect des vacations sur la carte de chaleur** : Résolu par l'ajout d'un tri secondaire.
-- [x] **Tooltip "undefined" sur la carte de chaleur** : Résolu par le renommage de la propriété `v` en `value`.
+- Parsing CSV corrigé : Normalisation des en-têtes et gestion des accents
+- Priorités d'agents corrigées : Ordre d'apparition dans le fichier
+- Sélection d'agents améliorée avec boutons interactifs
+- Carte de chaleur D3.js implémentée avec tri et couleurs spécifiques
+- Gestion des boutons MC, JC, NC, N en cours (problème persistant)
 
+## ⚠️ Problèmes Actuels
+- Les boutons MC, JC, NC ne s'affichent pas correctement dans le bloc "Contrôles de Capacité"
+- Les boutons N sont désactivés mais ne sont pas gelés en état activé (orange)
+- Nécessité d'améliorer la gestion des boutons gelés (non cliquables mais orange)
+
+## 📋 Prochaines étapes
+1. Résoudre le problème d'affichage et de gestion des boutons MC, JC, NC et N dans le bloc "Contrôles de Capacité"
+2. Valider le calcul de capacité pour toutes les périodes (Semaine Chargée, Creuse, Hiver, etc.) et toutes les hypothèses SIV (fermé, faible, moyen, fort)
+3. Finaliser l'interface utilisateur et optimiser l'expérience
+4. Supprimer les logs de debug restants et améliorer la documentation
+
+## ✅ Complété
+
+### Structure de base
+- Interface utilisateur HTML/CSS fonctionnelle
+- Sélecteur de date avec calendrier
+- Graphique Chart.js pour l'affichage des capacités
+- Intégration des grilles de vacation CSV
+- Mapping des effectifs vers capacités
+- Règles SIV pour réductions d'effectifs
+- Carte de chaleur des vacations (couleurs et ordre corrigés)
+- Nouvelle carte de chaleur D3.js "Détails des vacations" fonctionnelle
+
+### Logique métier
+- Détection automatique des périodes (Hiver/Chargée/Creuse)
+- Classification des jours (Semaine/Samedi/Dimanche)
+- Calcul des capacités par tranches de 15 minutes
+- Application des réductions SIV
+- Moyenne mobile sur 1 heure (décalée de 45 min)
+- Gestion des priorités agents corrigée
+- Sélection d'agents fonctionnelle
+- Correction des décalages horaires et alignement des courbes
+
+### Corrections récentes
+- Parsing CSV corrigé : Normalisation des en-têtes et gestion des accents
+- Priorités d'agents corrigées : Ordre d'apparition dans le fichier
+- Sélection d'agents améliorée avec boutons interactifs
+- Carte de chaleur D3.js implémentée avec tri et couleurs spécifiques
+- Gestion des boutons MC, JC, NC, N en cours (problème persistant)
+
+## ⚠️ Problèmes Actuels
+- Les boutons MC, JC, NC ne s'affichent pas correctement dans le bloc "Contrôles de Capacité"
+- Les boutons N sont désactivés mais ne sont pas gelés en état activé (orange)
+- Nécessité d'améliorer la gestion des boutons gelés (non cliquables mais orange)
+
+## 📋 Prochaines étapes
+1. Résoudre le problème d'affichage et de gestion des boutons MC, JC, NC et N dans le bloc "Contrôles de Capacité"
+2. Valider le calcul de capacité pour toutes les périodes (Semaine Chargée, Creuse, Hiver, etc.) et toutes les hypothèses SIV (fermé, faible, moyen, fort)
+3. Finaliser l'interface utilisateur et optimiser l'expérience
 ## ✅ Résolu
 
 ### Problèmes critiques résolus

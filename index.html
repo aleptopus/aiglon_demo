@@ -38,50 +38,20 @@
                             </button>
                             <p id="jsonFileName" class="file-name-display">Aucun fichier</p>
                         </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2 class="card-title">Filtres Interactifs</h2>
-                    <div class="date-controls-container">
-                        <div class="date-inputs">
-                            <label for="dateStartInput">Début:</label>
-                            <input type="date" id="dateStartInput" disabled>
-                            <label for="dateEndInput">Fin:</label>
-                            <input type="date" id="dateEndInput" disabled>
-                        </div>
-                        <div id="date-slider-container"></div>
-                    </div>
-                    <div class="toggles-container">
-                        <div class="filter-group-vertical">
-                            <label for="periodSelect">Grille de vacation</label>
-                            <select id="periodSelect" class="select-dropdown">
-                                <option value="">Sélectionner une grille...</option>
-                                <option value="SemCha">Semaine Chargée</option>
-                                <option value="SamCha">Samedi Chargé</option>
-                                <option value="DimCha">Dimanche Chargé</option>
-                                <option value="SemCre">Semaine Creuse</option>
-                                <option value="SamCre">Samedi Creux</option>
-                                <option value="DimCre">Dimanche Creux</option>
-                                <option value="SemHiv">Semaine Hiver</option>
-                                <option value="SamHiv">Samedi Hiver</option>
-                                <option value="DimHiv">Dimanche Hiver</option>
-                            </select>
-                        </div>
-                        <div class="filter-group-vertical">
-                            <label>Jours de la semaine</label>
-                            <div id="dayOfWeekToggles" class="toggle-group"></div>
-                        </div>
-                        <div class="filter-group-vertical">
-                            <label>Types de trafic</label>
-                            <div id="trafficTypeToggles" class="toggle-group"></div>
-                        </div>
                     </div>
                 </div>
 
                 <div id="dashboardContent" class="hidden">
-                    <!-- ... le reste du contenu reste identique ... -->
+                    <div class="card">
+                        <h2 class="card-title">Synthèse</h2>
+                         <div class="table-container">
+                            <table id="summaryTable">
+                                <thead></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <div class="stats-grid">
                         <div class="card stat-card">
                             <h3 class="stat-title">Départs / jour</h3>
@@ -99,25 +69,43 @@
                             <h3 class="stat-title">Total / jour (moy.)</h3>
                             <p id="avgTotal" class="stat-value">0</p>
                         </div>
-                        <div class="card stat-card">
-                            <h3 class="stat-title">Départs (Min/Max)</h3>
-                            <p id="depMinMaxDate" class="stat-value-small">N/A</p>
+                    </div>
+
+                    <div class="card">
+                        <h2 class="card-title">Filtres Interactifs</h2>
+                        <div class="date-controls-container">
+                            <div class="date-inputs">
+                                <label for="dateStartInput">Début:</label>
+                                <input type="date" id="dateStartInput" disabled>
+                                <label for="dateEndInput">Fin:</label>
+                                <input type="date" id="dateEndInput" disabled>
+                            </div>
+                            <div id="date-slider-container"></div>
                         </div>
-                        <div class="card stat-card">
-                            <h3 class="stat-title">Arrivées (Min/Max)</h3>
-                            <p id="arrMinMaxDate" class="stat-value-small">N/A</p>
-                        </div>
-                        <div class="card stat-card">
-                            <h3 class="stat-title">TMA (Min/Max)</h3>
-                            <p id="tmaMinMaxDate" class="stat-value-small">N/A</p>
-                        </div>
-                        <div class="card stat-card">
-                            <h3 class="stat-title">Capacité (Min/Max)</h3>
-                            <p id="capacityMinMaxDate" class="stat-value-small">N/A</p>
-                        </div>
-                        <div class="card stat-card">
-                            <h3 class="stat-title">Agents (Min/Max)</h3>
-                            <p id="agentsMinMaxDate" class="stat-value-small">N/A</p>
+                        <div class="toggles-container">
+                            <div class="filter-group-vertical">
+                                <label for="periodSelect">Grille de vacation</label>
+                                <select id="periodSelect" class="select-dropdown">
+                                    <option value="">Sélectionner une grille...</option>
+                                    <option value="SemCha">Semaine Chargée</option>
+                                    <option value="SamCha">Samedi Chargé</option>
+                                    <option value="DimCha">Dimanche Chargée</option>
+                                    <option value="SemCre">Semaine Creuse</option>
+                                    <option value="SamCre">Samedi Creux</option>
+                                    <option value="DimCre">Dimanche Creux</option>
+                                    <option value="SemHiv">Semaine Hiver</option>
+                                    <option value="SamHiv">Samedi Hiver</option>
+                                    <option value="DimHiv">Dimanche Hiver</option>
+                                </select>
+                            </div>
+                            <div class="filter-group-vertical">
+                                <label>Jours de la semaine</label>
+                                <div id="dayOfWeekToggles" class="toggle-group"></div>
+                            </div>
+                            <div class="filter-group-vertical">
+                                <label>Types de trafic</label>
+                                <div id="trafficTypeToggles" class="toggle-group"></div>
+                            </div>
                         </div>
                     </div>
                     
@@ -136,75 +124,27 @@
                     </div>
 
                     <div id="capacityControlsCard" class="card hidden">
-                        <h2 class="card-title">Contrôles de Capacité</h2>
-                        <div class="capacity-controls-simplified">
-                            <div class="control-group">
-                                <label>Effectif par vacation</label>
-                                <div class="vacation-controls">
-                                    <div class="filter-group-horizontal">
-                                        <label>Vacations Je</label>
-                                        <div id="vacationTogglesJe" class="toggle-group"></div>
-                                    </div>
-                                    <div class="filter-group-horizontal">
-                                        <label>Vacations M</label>
-                                        <div id="vacationTogglesM" class="toggle-group"></div>
-                                    </div>
-                                    <div class="filter-group-horizontal">
-                                        <label>Vacations J</label>
-                                        <div id="vacationTogglesJ" class="toggle-group"></div>
-                                    </div>
-                                    <div class="filter-group-horizontal">
-                                        <label>Vacations S/N</label>
-                                        <div id="vacationTogglesSN" class="toggle-group"></div>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="capacity-controls-row">
                             <div class="control-group">
                                 <label for="sivSelect">Hypothèse SIV</label>
-<select id="sivSelect" class="select-dropdown">
-  <option value="fermé">Fermé</option>
+                                <select id="sivSelect" class="select-dropdown">
+                                    <option value="fermé">Fermé</option>
                                     <option value="VFR faible">Faible</option>
                                     <option value="VFR moyen">Moyen</option>
                                     <option value="VFR fort" selected>Fort</option>
                                 </select>
                             </div>
+                            <div class="toggle-group" id="vacationTogglesJe"></div>
+                            <div class="toggle-group" id="vacationTogglesM"></div>
+                        </div>
+                        <div class="capacity-controls-row">
+                            <div class="toggle-group" id="vacationTogglesJ"></div>
+                            <div class="toggle-group" id="vacationTogglesSN"></div>
                         </div>
                     </div>
                     
-                    <div class="card">
-                        <h2 class="card-title">Synthèse</h2>
-                         <div class="table-container">
-                            <table id="summaryTable">
-                                <thead></thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <div id="d3-heatmap-container" class="card"></div>
 
-                    <div class="card">
-                        <h2 class="card-title">Carte des Vacations</h2>
-                        <div class="heatmap-container">
-                            <canvas id="vacation-heatmap"></canvas>
-                        </div>
-                        <div class="heatmap-legend">
-                            <div class="legend-item">
-                                <span class="legend-color" style="background-color: rgba(128, 0, 128, 0.7);"></span>
-                                <span>Actif (1)</span>
-                            </div>
-                            <div class="legend-item">
-                                <span class="legend-color" style="background-color: rgba(255, 0, 0, 0.7);"></span>
-                                <span>Chef (C)</span>
-                            </div>
-                            <div class="legend-item">
-                                <span class="legend-color" style="background-color: rgba(135, 206, 235, 0.7);"></span>
-                                <span>Pause (P)</span>
-                            </div>
-                            <div class="legend-item">
-                                <span class="legend-color" style="background-color: rgba(255, 165, 0, 0.7);"></span>
-                                <span>Repos (R)</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
                 
                 <div id="initialMessage" class="card">
