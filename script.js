@@ -163,17 +163,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     const dayOfWeek = (currentDate.getUTCDay() + 6) % 7;
                     if (opsDaysStr[dayOfWeek] !== '0') {
                         const utcDt = new Date(`${currentDate.toISOString().slice(0, 10)}T${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}:00Z`);
-                        // timeSlot doit être basé sur l'heure UTC du vol, car les données TMA sont en UTC
+                        
+                        // Appliquer les décalages spécifiques pour les arrivées et départs
+                        const offsetMinutes = values[colIndices.ad] === 'A' ? -24 : (values[colIndices.ad] === 'D' ? 11 : 0);
+                        const adjustedDt = new Date(utcDt.getTime() + offsetMinutes * 60 * 1000);
+
+                        // timeSlot doit être basé sur l'heure UTC du vol ajusté
                         const makeSlotUTC = (date) => `${String(date.getUTCHours()).padStart(2, '0')}:${String(Math.floor(date.getUTCMinutes() / 15) * 15).padStart(2, '0')}`;
                         
-                        // localTmaDt est utilisé pour la date du vol, mais le timeSlot doit être UTC
-                        const offsetMinutes = values[colIndices.ad] === 'A' ? -24 : (values[colIndices.ad] === 'D' ? 11 : 0);
-                        const localTmaDt = new Date(utcDt.getTime() + offsetMinutes * 60 * 1000); // Keep this for date/datetime if needed elsewhere
-
                         flights.push({ 
-                            date: new Date(utcDt.getFullYear(), utcDt.getMonth(), utcDt.getDate()), // Date should be UTC for consistency
-                            datetime: utcDt, // Datetime should be UTC for consistency
-                            timeSlot: makeSlotUTC(utcDt), // timeSlot should be UTC
+                            date: new Date(adjustedDt.getFullYear(), adjustedDt.getMonth(), adjustedDt.getDate()), // Date should be UTC for consistency
+                            datetime: adjustedDt, // Datetime should be UTC for consistency
+                            timeSlot: makeSlotUTC(adjustedDt), // timeSlot should be UTC
                             isArrival: values[colIndices.ad] === 'A' ? 1 : 0, 
                             isDeparture: values[colIndices.ad] === 'D' ? 1 : 0 
                         });
@@ -261,8 +262,26 @@ document.addEventListener('DOMContentLoaded', () => {
         state.currentStartDate = elements.dateStartInput.valueAsDate;
         state.currentEndDate = elements.dateEndInput.valueAsDate;
         state.windowDurationMs = state.currentEndDate.getTime() - state.currentStartDate.getTime();
+        
+        if (isTransitionPeriod(state.currentStartDate, state.currentEndDate)) {
+            alert("La période sélectionnée chevauche un changement d'heure. Veuillez sélectionner une période entièrement en heure d'été ou d'hiver.");
+            return;
+        }
+
         updateSliderHandle();
         updateDashboard(false);
+    }
+
+    function isTransitionPeriod(startDate, endDate) {
+        const startOffset = capacityCalculator.getDSTOffset(startDate);
+        let currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+            if (capacityCalculator.getDSTOffset(currentDate) !== startOffset) {
+                return true; // Période de transition détectée
+            }
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        return false;
     }
     
     function updateSliderHandle() {
@@ -316,10 +335,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateMainChart(data, showCapacity) { // showCapacity is now always true if hasCapacityData
         const numDays = new Set(data.map(d => d.date.toDateString())).size || 1;
         const slotData = new Map();
-        for (let h = 0; h < 24; h++) { for (let m = 0; m < 60; m += 15) { slotData.set(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`, { isArrival: 0, isDeparture: 0, tma: 0 }); } }
+        
+        // Generate slots for internal data processing (always UTC)
+        const utcSlots = [];
+        for (let h = 0; h < 24; h++) {
+            for (let m = 0; m < 60; m += 15) {
+                const slotStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                utcSlots.push(slotStr);
+                slotData.set(slotStr, { isArrival: 0, isDeparture: 0, tma: 0 });
+            }
+        }
+
         const tmaTracker = new Set();
         data.forEach(d => {
-            const slot = slotData.get(d.timeSlot);
+            const slot = slotData.get(d.timeSlot); // d.timeSlot is always UTC
             if(slot) {
                 slot.isArrival += d.isArrival; slot.isDeparture += d.isDeparture;
                 const tmaKey = `${d.date.toDateString()}-${d.timeSlot}`;
@@ -328,21 +357,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         const rollingData = new Map();
-        const sortedSlots = Array.from(slotData.keys()).sort();
-        for(let i = 0; i < sortedSlots.length; i++) {
+        for(let i = 0; i < utcSlots.length; i++) {
             let sums = { isArrival: 0, isDeparture: 0, tma: 0 };
-            for (let j = i; j < Math.min(i + 4, sortedSlots.length); j++) {
-                const slotInfo = slotData.get(sortedSlots[j]);
+            for (let j = i; j < Math.min(i + 4, utcSlots.length); j++) {
+                const slotInfo = slotData.get(utcSlots[j]);
                 sums.isArrival += slotInfo.isArrival; sums.isDeparture += slotInfo.isDeparture; sums.tma += slotInfo.tma;
             }
-            rollingData.set(sortedSlots[i], {
+            rollingData.set(utcSlots[i], {
                 isArrival: sums.isArrival / numDays, isDeparture: sums.isDeparture / numDays, tma: sums.tma / numDays,
             });
         }
         
         const activeTraffic = [...elements.trafficToggles.querySelectorAll('input:checked')].map(cb => cb.value);
         const datasets = TRAFFIC_TYPES.map(type => {
-            const data = Array.from(rollingData.values()).map(d => d[type.key]);
+            // Map data to the new sortedSlots (display labels)
+            const data = utcSlots.map(utcSlot => rollingData.get(utcSlot)?.[type.key] || 0);
             console.log(`Dataset for ${type.label}:`, data);
             return {
                 label: type.label, data: data,
@@ -369,7 +398,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const capacityResult = capacityCalculator.calculateCapacityWithSpecificGrid(
                 gridToUse,                    // Grille sélectionnée ou par défaut
                 customSelection,              // Sélection d'agents personnalisée ou automatique
-                sivHypothesis                 // Hypothèse SIV
+                sivHypothesis,                // Hypothèse SIV
+                state.currentStartDate        // Date de début pour le calcul DST
             );
 
             const capacityData = capacityResult.capacities;
@@ -383,13 +413,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: 'line',
                 fill: true,
                 pointRadius: 0,
-                stepped: 'before',  // Courbe en escalier, alignée sur le début du créneau
+                stepped: 'middle',  // Courbe en escalier, alignée sur le milieu du créneau
                 order: -1,
                 hidden: !state.isStacked // Hide if not stacked
             });
         }
 
-        console.log('Chart Labels (sortedSlots):', sortedSlots);
+        console.log('Chart Labels (utcSlots):', utcSlots);
         console.log('Final Chart Datasets:', datasets);
 
         if (state.trafficChart) state.trafficChart.destroy();
@@ -398,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             state.trafficChart = new Chart(elements.chartCanvas, {
                 type: 'bar',
-                data: { labels: sortedSlots, datasets },
+                data: { labels: utcSlots, datasets }, // Use utcSlots as base labels
                 options: {
                     responsive: true, maintainAspectRatio: false, animation: { duration: 500 },
                     plugins: {
@@ -408,14 +438,22 @@ document.addEventListener('DOMContentLoaded', () => {
                             titleAlign: 'center', bodyAlign: 'center', footerAlign: 'center',
                             callbacks: {
                                 title: function(context) {
-                                    const label = context[0].label;
-                                    const h = parseInt(label.split(':')[0]); const m = parseInt(label.split(':')[1]);
-                                    const startDate = new Date(2000, 0, 1, h, m);
-                                    const endDate = new Date(startDate.getTime() + 59 * 60 * 1000);
-                                    const getTime = (d) => state.useUTC ? 
-                                        `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}` :
-                                        `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                                    return `Créneau ${getTime(startDate)} - ${getTime(endDate)} (${state.useUTC ? 'UTC' : 'Local'})`;
+                                    const label = context[0].label; // This is now the UTC slot label
+                                    const [h, m] = label.split(':').map(Number);
+                                    const utcDate = new Date(Date.UTC(2000, 0, 1, h, m));
+                                    const utcEndDate = new Date(utcDate.getTime() + 59 * 60 * 1000);
+                                    
+                                    const formatTime = (dateObj, useUTC) => {
+                                        if (useUTC) {
+                                            return `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')}`;
+                                        } else {
+                                            const offset = capacityCalculator.getDSTOffset(dateObj);
+                                            const localDate = new Date(dateObj.getTime() + offset * 3600 * 1000);
+                                            return `${String(localDate.getHours()).padStart(2, '0')}:${String(localDate.getMinutes()).padStart(2, '0')}`;
+                                        }
+                                    };
+                                    
+                                    return `Créneau ${formatTime(utcDate, state.useUTC)} - ${formatTime(utcEndDate, state.useUTC)} (${state.useUTC ? 'UTC' : 'Local'})`;
                                 },
                                 label: function(context) { return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}`; },
                                 footer: function(context) {
@@ -432,12 +470,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             ticks: { 
                                 color: 'var(--text-secondary)',
                                 callback: function(value, index, ticks) {
-                                    const slot = this.getLabelForValue(value);
+                                    const slot = this.getLabelForValue(value); // This is the UTC slot label
                                     const [h, m] = slot.split(':').map(Number);
-                                    const date = new Date(2000, 0, 1, h, m);
-                                    return state.useUTC ? 
-                                        `${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}` :
-                                        slot;
+                                    const utcDate = new Date(Date.UTC(2000, 0, 1, h, m));
+                                    
+                                    if (state.useUTC) {
+                                        return `${String(utcDate.getUTCHours()).padStart(2, '0')}:${String(utcDate.getUTCMinutes()).padStart(2, '0')}`;
+                                    } else {
+                                        const offset = capacityCalculator.getDSTOffset(utcDate);
+                                        const localDate = new Date(utcDate.getTime() + offset * 3600 * 1000);
+                                        return `${String(localDate.getHours()).padStart(2, '0')}:${String(localDate.getMinutes()).padStart(2, '0')}`;
+                                    }
                                 }
                             }, 
                             grid: { color: 'rgba(161, 170, 184, 0.2)' } 

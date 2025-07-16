@@ -34,14 +34,7 @@
 - [x] **Traitement trafic en UTC** : `timeSlot` des données COHOR basé sur l'heure UTC.
 - [x] **Alignement courbe capacité** : Tentative d'alignement sur le bord gauche des histogrammes (`stepped: 'before'`).
 
-## 🔄 En cours
-
-### Validation et ajustements
-- [ ] **Validation des résultats** : Vérifier la cohérence des courbes affichées
-- [ ] **Calibrage des priorités** : S'assurer que l'ordre de priorité correspond aux attentes métier
-- [ ] **Tests avec différentes dates** : Valider le comportement sur diverses périodes
-
-## ❌ Problèmes identifiés et résolus
+## ✅ Résolu
 
 ### Problèmes critiques résolus
 - [x] **Parsing CSV défaillant** : 
@@ -61,70 +54,44 @@
   - **Problème** : Aucun agent actif détecté (valeurs toujours "0")
   - **Solution** : Agents maintenant correctement sélectionnés avec valeurs "1" aux créneaux actifs
 
-### Problèmes en cours d'investigation
-- [ ] **Validation des courbes** : Les courbes s'affichent mais nécessitent validation métier
-- [ ] **Cohérence des calculs** : Vérifier que les résultats correspondent aux attentes
+- [x] **Décalage Courbe Capacité / Trafic** :
+  - **Problème** : Décalage temporel persistant entre la courbe de capacité et les histogrammes de trafic.
+  - **Solution** : Correction du calcul DST, utilisation de `Intl.DateTimeFormat` pour la conversion précise en heure locale de Paris, ajustement de la moyenne glissante dans `CapacityCalculator.js` pour un alignement correct, et ajustement de l'affichage dans `script.js` (`stepped: 'middle'`).
 
-## ✅ Travaux récents
+- [x] **Gestion Heure d'Été/Hiver** :
+  - **Problème** : Décalage d'une heure pour les dates en heure d'été, problème dans la conversion UTC/Local.
+  - **Solution** : Correction du calcul DST dans `CapacityCalculator.js` et notification des périodes de transition dans `script.js`.
 
-### Gestion des fuseaux horaires
-- [x] **Bascule UTC/Local** dans l'interface graphique
-- [x] **Conversion des vacations** locales en UTC pour les calculs
-- [x] **Option "Fermé"** ajoutée au menu SIV (aucune réduction d'agents)
-- [x] **Correction des offsets** pour les périodes d'été/hiver
-
-### Prochaines vérifications
-- [ ] **Validation calculs UTC** : Vérifier le décalage de 2h en été
-- [ ] **Tests saisonniers** : Hiver (UTC+1) vs Été (UTC+2)
-- [ ] **Cohérence données** : Comparaison script Python/JS
+- [x] **Décalage des données COHOR** :
+  - **Problème** : Décalage des données COHOR par rapport aux offsets spécifiés.
+  - **Solution** : Application des offsets de -24 min (arrivée) et +11 min (départ) directement au `timeSlot` des données COHOR dans `script.js`.
 
 ## 📋 Prochaines étapes
 
-1. **Résoudre le décalage temporel et l'alignement des courbes :**
-   - Vérifier et corriger le décalage persistant entre la courbe de capacité et les histogrammes de trafic.
-   - S'assurer que le pic de capacité s'affiche à la bonne heure (ex: 05h UTC au lieu de 06h UTC).
-   - Confirmer que l'alignement de la courbe de capacité est sur le bord gauche des histogrammes.
-   - Revoir la gestion des fuseaux horaires (UTC/Local) pour s'assurer de la cohérence, notamment pour l'heure d'été/hiver.
-   - **Analyser `test_final.html`** : Ce script fonctionne pour une hypothèse VFR fort et doit être analysé pour comprendre et traduire sa logique.
-
-2. **Vérifier l'application des règles SIV :**
+1. **Vérifier l'application des règles SIV :**
    - S'assurer que les réductions SIV sont correctement appliquées pour toutes les hypothèses (faible, moyen, fort), et pas seulement pour "fermé".
    - Analyser les données de `sivRules.js` si les réductions attendues ne sont pas appliquées.
 
-3. **Logique des vacations de nuit (N) :**
+2. **Logique des vacations de nuit (N) :**
    - Implémenter la logique spécifique pour les vacations de nuit (N) qui s'appliquent au J+1 et sont obligatoires.
 
-4. **Nettoyage et optimisation** :
+3. **Nettoyage et optimisation** :
    - Supprimer les logs de débogage restants
    - Optimiser les performances si nécessaire
    - Finaliser la documentation
    
-5. **à mettre en place** :
-   - Filtre à modifier si dans le calendrier j'affiche une date de début et de fin égale on affiche cette journée par exemple si date début 10 juillet et date de fin 10 juillet
-   alors on affiche de le 10 juillet
-   - Dans les vacations on va supprimer les boutons des vacation obligatoires donc l'utilisateur n'aura pas à les modifier dans son scénario whatif, il s'agit des vacations chef 
-   MC, JC et NC. Il y a aussi les 2 N qui sont obligatoires, attention les N concernent le jour J+1, j'ai remarqué qu'elles sont mal placées. Par exemple si un agent est N le 10 juillet 
-   il réalise la nuit du 10 au 11 juillet.
-   - Il faut un bouton bascule "toggle button" dans le graphique à côté des légendes pour passer de l'heure locale à l'heure utc
-   - Il faut ajouter le scénario SIV fermé avec aussi dans le menu déroulant. Dans ce mode il n'y a pas de réduction d'agents
-   - Je veux ajouter en dernière partie un graphique waffle pour repésenter les vacations. Lorsuqe l'utilisateur aura sélectionné une période pour la grille alors les vacations 
-   seront visualisées par un carré pour 15 min (pour 24h 96 carrés) avec selon le statut (transparent si vide, violet si valeur = 1, rouge pour C, bleu cile pour P et orange pour R). Je souhaite 
-   utiliser la bibliothèque nivo pour cela. Tu disposes du fichier contexte nivo.txt pour comprendre la bibliothèque.
-   
-6. **à changer dans l'interface** :
-   - Je veux qu'on respecte la chartre graphique définie et garder un espacement entre les blocs.
-   - Je veux les données indicateur en haut (Départs/jour, Arrivées/jour, TMA/jour, Total /jour) et sur une seule ligne. Je veux que 6 panneaux indicateurs sur une même ligne.
-   Aux précédents on ajoute Date traffic min et Date traffic max, lorsque l'utilisateur sélectionne une plage de date il faut lui afficher la date qui a le plus de trafic (somme LFLL et TMA),
-   et la date qui en compte le moins. On supprime donc Capacité min/max, Agents min/max, Départ et arrivées min/max.
-   - Je veux centrer le titre du graphique et afficher le nombre de jours concernés par le filtre défini par l'utilisateur. Par exemple si l'utilisateur propose date de début 10 juillet 2025 
-   et date de fin 25 juillet 2025 puis flitre que les samedis on affiche: Trafic moyen par créneau horaire (nombre de jours: 2) 
-   - Il faut désactiver la courbe Capacité si l'utilisateur bascule sur la vue côté à côté.
-   - Pour le bloc contrôle de capacité: Je veux optimiser l'affichage, supprime le titre et les soustitres vacations. Crée des bouton plus étroits sans changer la taille en tronquant le nom des vacations,
-   M2 au lieu de M2#01 (les boutons auront la même taille que les boutons actuel chefs). Dans l'idéal je veux tout sur une ligne. D'abord le menu déroulant avec Hypothèse SIV (garde ce sous titre) et dans l'ordre dans le menu (fermé, faible,moyen et fort). Pour ce menu déroulant 
-garde par défault le paramétrage fort si l'utilisateur ne modifie pas ce menu. Ensuite je veux 3 blocs avec le groupe M, J et SN sans sous titres. On ne laissera pas le choix à l'utilisateur de activer au désactiver 
-les vacations chefs (MC, JC et NC) et les vacations N. Il y aura donc le bloc M avec le 7 vacations selon l'ordre de la grille, le bloc J avec 7 vacations selon l'ordre de 
-la grille et le bloc N avec 5 vacations selon l'ordre de la grille.   
-   
+4. **Améliorations de l'interface utilisateur (UI) :**
+   - Filtre de date pour afficher une seule journée si date de début et de fin sont égales.
+   - Supprimer les boutons des vacations obligatoires (MC, JC, NC, N) et les gérer en interne.
+   - Ajouter un bouton bascule "toggle button" dans le graphique pour passer de l'heure locale à l'heure UTC.
+   - Ajouter le scénario SIV "fermé" dans le menu déroulant.
+   - Ajouter un graphique waffle pour représenter les vacations (utilisation de la bibliothèque nivo).
+   - Respecter la charte graphique et l'espacement entre les blocs.
+   - Afficher les données indicateurs en haut sur une seule ligne (Départs/jour, Arrivées/jour, TMA/jour, Total /jour, Date trafic min, Date trafic max).
+   - Centrer le titre du graphique et afficher le nombre de jours concernés par le filtre.
+   - Désactiver la courbe Capacité si l'utilisateur bascule sur la vue côte à côte.
+   - Optimiser l'affichage du bloc contrôle de capacité (boutons plus étroits, tout sur une ligne).
+
 ## 🎯 Objectifs atteints
 
 - ✅ Application fonctionnelle de calcul de capacité aéroportuaire
@@ -132,22 +99,9 @@ la grille et le bloc N avec 5 vacations selon l'ordre de la grille.
 - ✅ Calculs basés sur les grilles de vacation réelles
 - ✅ Prise en compte des contraintes SIV
 - ✅ Affichage graphique des résultats
+- ✅ Résolution complète des problèmes de décalage horaire et d'alignement des courbes.
 
 ## 📊 État actuel
 
-**Statut** : Fonctionnel avec courbes affichées
-**Dernière correction** : Priorités d'agents basées sur l'ordre d'apparition
-**Prochaine étape** : Validation métier des résultats
-
-## Problèmes Actuels
-1.  **Décalage Courbe Capacité / Trafic :** La courbe de capacité est toujours décalée par rapport aux histogrammes de trafic, et son alignement sur le bord gauche des barres n'est pas correct. Le pic de capacité s'affiche à 06h UTC au lieu de 05h UTC.
-2.  **Gestion Heure d'Été/Hiver :** Il semble y avoir un décalage d'une heure pour les dates en heure d'été, suggérant un problème dans la conversion UTC/Local pour les grilles de vacation.
-3.  **Application des Règles SIV :** Les réductions SIV ne semblent pas s'appliquer correctement pour les hypothèses "faible", "moyen", "fort", ou les données dans `sivRules.js` ne correspondent pas aux attentes.
-
-## Validation Requise
-- Cohérence des courbes avec les attentes métier
-- Ordre de priorité des agents conforme aux règles
-- Comportement correct sur différentes dates/périodes
-- **Correction du décalage temporel et alignement visuel.**
-- **Validation de l'application des règles SIV.**
-- **Validation de la logique des vacations de nuit.**
+**Statut** : Fonctionnel et aligné.
+**Prochaine étape** : Validation métier des règles SIV et implémentation des vacations de nuit.

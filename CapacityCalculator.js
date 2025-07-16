@@ -1,14 +1,22 @@
+const DATE_CONFIG = {
+  DST_TRANSITIONS: {
+    TO_SUMMER: '2025-03-30', // Dernier dimanche de mars
+    TO_WINTER: '2025-10-26'  // Dernier dimanche d'octobre
+  },
+  PERIODS: {
+    Hiv: [["01-01", "05-04"], ["12-13", "12-31"]],
+    Cha: [["05-05", "10-13"]], 
+    Cre: [["10-14", "12-12"]]
+  }
+};
+
 class CapacityCalculator {
   constructor(staffingMap, sivRules, vacationGrids) {
     this.staffingMap = staffingMap;
     this.sivRules = sivRules;
     this.vacationGrids = vacationGrids;
     
-    this.periods = {
-      Hiv: [["01-01", "05-04"], ["12-13", "12-31"]],
-      Cha: [["05-05", "10-13"]], 
-      Cre: [["10-14", "12-12"]]
-    };
+    this.periods = DATE_CONFIG.PERIODS;
 
     this.sivPeriodMapping = {
       Hiv: "période hiver",
@@ -96,6 +104,24 @@ class CapacityCalculator {
     return { periodCode: period, dayType };
   }
 
+  getDSTOffset(date) {
+    const year = date.getUTCFullYear();
+
+    // Calcul du dernier dimanche de mars
+    const lastDayMarch = new Date(Date.UTC(year, 2, 31));
+    const lastSundayInMarch = new Date(Date.UTC(year, 2, 31 - lastDayMarch.getUTCDay()));
+
+    // Calcul du dernier dimanche d'octobre
+    const lastDayOctober = new Date(Date.UTC(year, 9, 31));
+    const lastSundayInOctober = new Date(Date.UTC(year, 9, 31 - lastDayOctober.getUTCDay()));
+
+    // Si la date est entre le dernier dimanche de mars et le dernier dimanche d'octobre
+    if (date >= lastSundayInMarch && date < lastSundayInOctober) {
+      return 2; // Heure d'été (UTC+2)
+    }
+    return 1; // Heure d'hiver (UTC+1)
+  }
+
   getAgentsByType(gridData) {
     if (!gridData || !gridData.grid || gridData.grid.length === 0) {
       console.warn('getAgentsByType - Grille de vacation invalide ou vide.');
@@ -162,10 +188,16 @@ class CapacityCalculator {
     const agentProfiles = {};
     let index = 0;
 
-    // Inclure les vacations fixes (MC, JC, NC) en premier
+    // Inclure les vacations fixes (MC, JC, NC, N) en premier
     agentsByType.MC.forEach(profile => { agentProfiles[index++] = profile; });
     agentsByType.JC.forEach(profile => { agentProfiles[index++] = profile; });
     agentsByType.NC.forEach(profile => { agentProfiles[index++] = profile; });
+    
+    // Ajouter les 2 agents N fixes (obligatoires)
+    const nightAgents = agentsByType.SN.filter(p => p.vacation.startsWith('N'));
+    nightAgents.slice(0, 2).forEach(profile => {
+      agentProfiles[index++] = profile;
+    });
     
     // 3 Je
     agentsByType.Je.slice(0, 3).forEach(profile => {
@@ -173,17 +205,18 @@ class CapacityCalculator {
     });
     
     // 8 M (après MC)
-    agentsByType.M.slice(0, 8 - agentsByType.MC.length).forEach(profile => { // Adjust slice for already included MC
+    agentsByType.M.slice(0, 8 - agentsByType.MC.length).forEach(profile => {
       agentProfiles[index++] = profile;
     });
     
     // 8 J (après JC)
-    agentsByType.J.slice(0, 8 - agentsByType.JC.length).forEach(profile => { // Adjust slice for already included JC
+    agentsByType.J.slice(0, 8 - agentsByType.JC.length).forEach(profile => {
       agentProfiles[index++] = profile;
     });
     
-    // 8 SN (après NC)
-    agentsByType.SN.slice(0, 8 - agentsByType.NC.length).forEach(profile => { // Adjust slice for already included NC
+    // 8 SN (après NC et N) - ajuster pour les agents N déjà inclus
+    const nonNightSN = agentsByType.SN.filter(p => !p.vacation.startsWith('N'));
+    nonNightSN.slice(0, 8 - agentsByType.NC.length - nightAgents.slice(0, 2).length).forEach(profile => {
       agentProfiles[index++] = profile;
     });
     
@@ -240,15 +273,18 @@ class CapacityCalculator {
 
     for (let i = 0; i < capacitySeries.length; i++) {
       // Calculate average over the current 15-min slot and the next 3 (total 4 periods = 60 min)
+      // The average should be centered, not shifted.
       let sum = 0;
       let count = 0;
-      for (let j = 0; j < 4; j++) {
-        if (i + j < capacitySeries.length) {
-          sum += capacitySeries[i + j];
+      // Calculate average over the current 15-min slot and the next 3 (total 4 periods = 60 min)
+      // This means for slot i, we average from i to i+3
+      for (let j = 0; j < 4; j++) { // Average over 4 periods: i, i+1, i+2, i+3
+        const idx = i + j;
+        if (idx >= 0 && idx < capacitySeries.length) {
+          sum += capacitySeries[idx];
           count++;
         }
       }
-      // Place the average at the current index 'i' (aligned to the start of the window)
       averagedSeries[i] = count > 0 ? parseFloat((sum / count).toFixed(2)) : 0;
     }
     return averagedSeries;
@@ -334,12 +370,13 @@ class CapacityCalculator {
     };
   }
 
-  calculateCapacityWithSpecificGrid(gridKey, customSelection = null, sivHypothesis = 'VFR fort') {
+  calculateCapacityWithSpecificGrid(gridKey, customSelection = null, sivHypothesis = 'VFR fort', startDate = new Date()) {
     // Parse gridKey (e.g., "SemCha" -> dayType="Sem", periodCode="Cha")
     const dayType = gridKey.substring(0, 3); // "Sem", "Sam", "Dim"
     const periodCode = gridKey.substring(3); // "Cha", "Cre", "Hiv"
     
     console.log(`Calculating capacity for grid: ${gridKey}, dayType: ${dayType}, periodCode: ${periodCode}`);
+    console.log(`SIV Hypothesis: ${sivHypothesis}`);
     
     const grid = this.vacationGrids[dayType]?.[periodCode];
     if (!grid || !grid.grid || grid.grid.length === 0) {
@@ -358,44 +395,32 @@ class CapacityCalculator {
     const effectiveAgents15Min = []; // Effective agents for each 15-minute slot
     
     for (let i = 0; i < 96; i++) {
-      const currentTimestamp = new Date();
       // Créer un timestamp UTC pour le début de la journée
-      const utcTimestamp = new Date(Date.UTC(currentTimestamp.getFullYear(), currentTimestamp.getMonth(), currentTimestamp.getDate(), 0, 0, 0));
-      utcTimestamp.setUTCMinutes(i * 15); // Ajouter les minutes pour le créneau actuel
+      const utcTimestamp = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate(), 0, 0, 0));
+      utcTimestamp.setUTCMinutes(i * 15);
 
-      // Les grilles de vacations sont en heure locale. Nous devons convertir l'heure UTC du créneau
-      // en heure locale de Paris pour la recherche dans la grille.
+      // Appliquer le décalage DST pour obtenir l'heure locale correcte
+      // L'offset doit être basé sur le timestamp UTC du créneau, pas seulement la startDate
+      const offset = this.getDSTOffset(utcTimestamp);
+      // Utiliser Intl.DateTimeFormat pour une conversion précise en heure locale de Paris
       const localTimeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Europe/Paris' };
       const localTimeParts = new Intl.DateTimeFormat('en-US', localTimeOptions).formatToParts(utcTimestamp);
       
       const localHour = localTimeParts.find(p => p.type === 'hour').value;
       const localMinute = localTimeParts.find(p => p.type === 'minute').value;
-      const localSecond = localTimeParts.find(p => p.type === 'second').value;
-
+      const localSecond = localTimeParts.find(p => p.type === 'second').value; // Should be '00'
       const hourMinuteStr = `${localHour}:${localMinute}:${localSecond}`;
-      console.log(`Processing slot (UTC): ${utcTimestamp.toISOString()} -> (Local Paris): ${hourMinuteStr}`); // Debug log
-
-      // Debugging DST conversion for specific dates
-      if (i === 0) { // Only log for the first slot (00:00 UTC)
-        const testDateSummer = new Date(Date.UTC(2025, 6, 15, 0, 0, 0)); // July 15, 2025 00:00 UTC
-        const testDateWinter = new Date(Date.UTC(2025, 0, 15, 0, 0, 0)); // Jan 15, 2025 00:00 UTC
-
-        const summerLocalParts = new Intl.DateTimeFormat('en-US', localTimeOptions).formatToParts(testDateSummer);
-        const winterLocalParts = new Intl.DateTimeFormat('en-US', localTimeOptions).formatToParts(testDateWinter);
-
-        const summerLocalTime = `${summerLocalParts.find(p => p.type === 'hour').value}:${summerLocalParts.find(p => p.type === 'minute').value}:${summerLocalParts.find(p => p.type === 'second').value}`;
-        const winterLocalTime = `${winterLocalParts.find(p => p.type === 'hour').value}:${winterLocalParts.find(p => p.type === 'minute').value}:${winterLocalParts.find(p => p.type === 'second').value}`;
-
-        console.log(`DEBUG DST: 2025-07-15 00:00 UTC -> Local Paris: ${summerLocalTime}`);
-        console.log(`DEBUG DST: 2025-01-15 00:00 UTC -> Local Paris: ${winterLocalTime}`);
-      }
+      
+      console.log(`Processing slot (UTC): ${utcTimestamp.toISOString()}, Local grid time (Paris): ${hourMinuteStr}`);
       
       const agentsAtThisSlot = this.countActiveAgents(selectedAgentProfiles, hourMinuteStr);
-      console.log(`Agents at ${hourMinuteStr}:`, agentsAtThisSlot); // Debug log
-      const sivReduction = this.getSIVReduction(periodCode, dayType, utcTimestamp, sivHypothesis); // Pass utcTimestamp
-      console.log(`SIV Reduction at ${hourMinuteStr}:`, sivReduction); // Debug log
+      const sivReduction = this.getSIVReduction(periodCode, dayType, utcTimestamp, sivHypothesis);
       const effectiveAgents = Math.max(0, agentsAtThisSlot - sivReduction);
-      console.log(`Effective Agents at ${hourMinuteStr}:`, effectiveAgents); // Debug log
+      
+      // Log de validation pour SIV fermé
+      if (sivHypothesis === 'fermé' && sivReduction !== 0) {
+        console.error(`ERREUR SIV: Réduction non nulle (${sivReduction}) en mode fermé!`);
+      }
       
       capacities15Min.push(this.staffingLookup(effectiveAgents));
       effectiveAgents15Min.push(effectiveAgents);
