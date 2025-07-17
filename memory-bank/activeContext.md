@@ -54,11 +54,19 @@ Le projet Aiglon est maintenant fonctionnel avec des courbes de capacité qui s'
    - Optimiser les performances si nécessaire
    - Finaliser la documentation
 
+5. **Améliorations UI/UX restantes :**
+   - Ajouter au titre du graphique le nombre de vols du filtre de la période.
+   - Au démarrage, s'assurer que la liste déroulante "Grille de vacation" est dans l'état "Sélectionner une grille..." et que la courbe de capacité ne s'affiche pas. Il faut que l'utilisateur sélectionne une période pour avoir la courbe de capacité et les 2 blocs sous le graphique.
+   - Ne pas verrouiller le chargement du fichier cohor s'il s'agit d'une période dans le passé ; le charger quand même.
+
 ## Active Decisions and Considerations
 - **Priorité des agents** : Ordre d'apparition dans le fichier CSV (solution finale validée)
 - **Sélection d'agents** : 7 premiers agents non-chefs par priorité, avec vacations fixes incluses.
 - **Architecture modulaire** : Séparation claire entre parsing, calculs et affichage
 - **Compatibilité** : Maintien de la structure existante des données
+- **Disposition des boutons d'effectif** : La fonctionnalité est OK, seule la disposition est à revoir.
+- **Détails des vacations par période** : Fonctionnalité OK.
+- **Nivo** : La bibliothèque Nivo n'est pas utilisée pour le moment.
 
 ## Current Status
 ✅ **DÉCALAGE RÉSOLU** : Le décalage temporel entre la courbe de capacité et les histogrammes de trafic est maintenant résolu. L'alignement visuel est correct.

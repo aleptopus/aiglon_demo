@@ -71,49 +71,7 @@
 - Gestion des boutons MC, JC, NC, N en cours (problème persistant)
 
 ## ⚠️ Problèmes Actuels
-- Les boutons MC, JC, NC ne s'affichent pas correctement dans le bloc "Contrôles de Capacité"
-- Les boutons N sont désactivés mais ne sont pas gelés en état activé (orange)
-- Nécessité d'améliorer la gestion des boutons gelés (non cliquables mais orange)
-
-## 📋 Prochaines étapes
-1. Résoudre le problème d'affichage et de gestion des boutons MC, JC, NC et N dans le bloc "Contrôles de Capacité"
-2. Valider le calcul de capacité pour toutes les périodes (Semaine Chargée, Creuse, Hiver, etc.) et toutes les hypothèses SIV (fermé, faible, moyen, fort)
-3. Finaliser l'interface utilisateur et optimiser l'expérience
-## ✅ Résolu
-
-### Problèmes critiques résolus
-- [x] **Parsing CSV défaillant** : 
-  - **Problème** : Les en-têtes CSV n'étaient pas normalisés (accents, casse)
-  - **Solution** : Normalisation avec `normalize("NFD").replace(/[\u0300-\u036f]/g, "")`
-
-- [x] **Priorités d'agents incorrectes** :
-  - **Problème initial** : Extraction de numéros depuis les IDs (M#01 → 1)
-  - **Problème corrigé** : La priorité doit être l'ordre d'apparition dans le fichier
-  - **Solution finale** : `priorité = index de ligne - 1`
-
-- [x] **Sélection d'agents vide** :
-  - **Problème** : Tous les agents avaient priorité 9999, aucun n'était sélectionné
-  - **Solution** : Correction de la logique de priorité
-
-- [x] **Capacités nulles** :
-  - **Problème** : Aucun agent actif détecté (valeurs toujours "0")
-  - **Solution** : Agents maintenant correctement sélectionnés avec valeurs "1" aux créneaux actifs
-
-- [x] **Décalage Courbe Capacité / Trafic** :
-  - **Problème** : Décalage temporel persistant entre la courbe de capacité et les histogrammes de trafic.
-  - **Solution** : Correction du calcul DST, utilisation de `Intl.DateTimeFormat` pour la conversion précise en heure locale de Paris, ajustement de la moyenne glissante dans `CapacityCalculator.js` pour un alignement correct, et ajustement de l'affichage dans `script.js` (`stepped: 'middle'`).
-
-- [x] **Gestion Heure d'Été/Hiver** :
-  - **Problème** : Décalage d'une heure pour les dates en heure d'été, problème dans la conversion UTC/Local.
-  - **Solution** : Correction du calcul DST dans `CapacityCalculator.js` et notification des périodes de transition dans `script.js`.
-
-- [x] **Décalage des données COHOR** :
-  - **Problème** : Décalage des données COHOR par rapport aux offsets spécifiés.
-  - **Solution** : Application des offsets de -24 min (arrivée) et +11 min (départ) directement au `timeSlot` des données COHOR dans `script.js`.
-
-- [x] **Problèmes d'affichage de la carte de chaleur** :
-  - **Problème** : Couleurs incorrectes et ordre des vacations non respecté.
-  - **Solution** : Correction du parsing CSV pour les valeurs de vacation, renommage de la propriété `v` en `value` dans les données de la heatmap et les callbacks de Chart.js, et ajout d'un tri secondaire pour les agents.
+- Aucun problème majeur identifié.
 
 ## 📋 Prochaines étapes
 
@@ -133,16 +91,12 @@
    - Finaliser la documentation
    
 5. **Améliorations de l'interface utilisateur (UI) :**
-   - Filtre de date pour afficher une seule journée si date de début et de fin sont égales.
-   - Supprimer les boutons des vacations obligatoires (MC, JC, NC, N) et les gérer en interne.
-   - Ajouter un bouton bascule "toggle button" dans le graphique pour passer de l'heure locale à l'heure UTC.
-   - Ajouter le scénario SIV "fermé" dans le menu déroulant.
-   - Ajouter un graphique waffle pour représenter les vacations (utilisation de la bibliothèque nivo).
-   - Respecter la charte graphique et l'espacement entre les blocs.
-   - Afficher les données indicateurs en haut sur une seule ligne (Départs/jour, Arrivées/jour, TMA/jour, Total /jour, Date trafic min, Date trafic max).
-   - Centrer le titre du graphique et afficher le nombre de jours concernés par le filtre.
-   - Désactiver la courbe Capacité si l'utilisateur bascule sur la vue côte à côte.
-   - Optimiser l'affichage du bloc contrôle de capacité (boutons plus étroits, tout sur une ligne).
+   - Ajouter au titre du graphique le nombre de vols du filtre de la période.
+   - Au démarrage, s'assurer que la liste déroulante "Grille de vacation" est dans l'état "Sélectionner une grille..." et que la courbe de capacité ne s'affiche pas. Il faut que l'utilisateur sélectionne une période pour avoir la courbe de capacité et les 2 blocs sous le graphique.
+   - Ne pas verrouiller le chargement du fichier cohor s'il s'agit d'une période dans le passé ; le charger quand même.
+   - La disposition des boutons de la partie effectif est à revoir.
+   - Les détails des vacations par période sont OK.
+   - La bibliothèque Nivo n'est pas utilisée.
 
 ## 🎯 Objectifs atteints
 
