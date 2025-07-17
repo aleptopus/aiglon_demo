@@ -595,7 +595,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const createAgentElement = (agent, type, isSelectable = true, isInitiallySelected = false) => {
             const element = document.createElement(isSelectable ? 'button' : 'span');
             element.className = 'agent-button'; // Apply button styling
-            if (!isSelectable) element.classList.add('inactive-agent-button'); // Add inactive class for non-selectable elements
+            if (!isSelectable) {
+                element.classList.add('selected'); // Fixed agents are always selected (orange)
+                element.style.cursor = 'default'; // Non-clickable
+            }
             if (isInitiallySelected) element.classList.add('selected'); // Add selected class if initially selected
             element.textContent = agent.vacation;
             element.dataset.agentType = type;
@@ -606,60 +609,47 @@ document.addEventListener('DOMContentLoaded', () => {
             return element;
         };
 
-        // Generate buttons for Je
+        // Generate buttons for Je (3 agents max)
         state.availableAgents.Je.slice(0, 3).forEach(agent => {
-            buttonContainers.Je.appendChild(createAgentElement(agent, 'Je'));
+            buttonContainers.Je.appendChild(createAgentElement(agent, 'Je', true));
         });
 
-        // Generate buttons for M (MC first, then M agents)
+        // Generate buttons for M (MC first as non-selectable, then M agents)
         const mAgents = state.availableAgents.M.filter(agent => agent.vacation !== 'MC');
         const mcAgent = state.availableAgents.M.find(agent => agent.vacation === 'MC');
         if (mcAgent) {
-            // Create a span styled as selected (orange) but not inactive (not grey) for MC
-            const mcSpan = document.createElement('span');
-            mcSpan.className = 'agent-button selected';
-            mcSpan.textContent = mcAgent.vacation;
-            buttonContainers.M.appendChild(mcSpan);
+            // MC is non-selectable and always active (orange)
+            buttonContainers.M.appendChild(createAgentElement(mcAgent, 'M', false));
         }
-        mAgents.slice(0, 9 - (mcAgent ? 1 : 0)).forEach(agent => { // 9 total M agents including MC
-            buttonContainers.M.appendChild(createAgentElement(agent, 'M'));
+        mAgents.slice(0, 8).forEach(agent => { // 8 selectable M agents
+            buttonContainers.M.appendChild(createAgentElement(agent, 'M', true));
         });
 
-        // Generate buttons for J (JC first, then J agents)
+        // Generate buttons for J (JC first as non-selectable, then J agents)
         const jAgents = state.availableAgents.J.filter(agent => agent.vacation !== 'JC');
         const jcAgent = state.availableAgents.J.find(agent => agent.vacation === 'JC');
         if (jcAgent) {
-            // Create a span styled as selected (orange) but not inactive for JC
-            const jcSpan = document.createElement('span');
-            jcSpan.className = 'agent-button selected';
-            jcSpan.textContent = jcAgent.vacation;
-            buttonContainers.J.appendChild(jcSpan);
+            // JC is non-selectable and always active (orange)
+            buttonContainers.J.appendChild(createAgentElement(jcAgent, 'J', false));
         }
-        jAgents.slice(0, 8 - (jcAgent ? 1 : 0)).forEach(agent => { // 8 total J agents including JC
-            buttonContainers.J.appendChild(createAgentElement(agent, 'J'));
+        jAgents.slice(0, 8).forEach(agent => { // 8 selectable J agents
+            buttonContainers.J.appendChild(createAgentElement(agent, 'J', true));
         });
 
-        // Generate buttons for SN (NC first, then N agents, then S agents)
+        // Generate buttons for SN (NC first as non-selectable, then N agents as non-selectable, then S agents)
         const snAgents = state.availableAgents.SN.filter(agent => agent.vacation !== 'NC' && !agent.vacation.startsWith('N'));
         const ncAgent = state.availableAgents.SN.find(agent => agent.vacation === 'NC');
         const nAgents = state.availableAgents.SN.filter(agent => agent.vacation.startsWith('N'));
 
         if (ncAgent) {
-            // Create a span styled as selected (orange) but not inactive for NC
-            const ncSpan = document.createElement('span');
-            ncSpan.className = 'agent-button selected';
-            ncSpan.textContent = ncAgent.vacation;
-            buttonContainers.SN.appendChild(ncSpan);
+            // NC is non-selectable and always active (orange)
+            buttonContainers.SN.appendChild(createAgentElement(ncAgent, 'SN', false));
         }
-        nAgents.slice(0, 2).forEach(agent => { // 2 N agents are not selectable
-            // Create spans styled as selected and inactive for N agents
-            const nSpan = document.createElement('span');
-            nSpan.className = 'agent-button selected inactive-agent-button';
-            nSpan.textContent = agent.vacation;
-            buttonContainers.SN.appendChild(nSpan);
+        nAgents.slice(0, 2).forEach(agent => { // 2 N agents are non-selectable and always active (orange)
+            buttonContainers.SN.appendChild(createAgentElement(agent, 'SN', false));
         });
-        snAgents.slice(0, 8 - (ncAgent ? 1 : 0) - 2).forEach(agent => { // 8 total SN agents including NC and 2 N
-            buttonContainers.SN.appendChild(createAgentElement(agent, 'SN'));
+        snAgents.slice(0, 8).forEach(agent => { // 8 selectable S agents
+            buttonContainers.SN.appendChild(createAgentElement(agent, 'SN', true));
         });
     }
     
@@ -710,6 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         updateAgentButtonStates();
+        updateEffectifTitle(); // Update the title after initialization
     }
     
     function toggleAgentSelection(type, agentId, buttonElement) {
@@ -726,6 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
             buttonElement.classList.add('selected');
         }
         
+        updateEffectifTitle(); // Update title when selection changes
         updateDashboard(false);
     }
     
@@ -976,5 +968,26 @@ document.addEventListener('DOMContentLoaded', () => {
             'R': 'Repos'
         };
         return types[code] || 'Vide';
+    }
+
+    // --- Effectif Title Update ---
+    function updateEffectifTitle() {
+        const titleElement = document.getElementById('capacityEffectifTitle');
+        if (!titleElement) return;
+
+        // Count selected agents by type, including fixed agents
+        const jeCount = state.customAgentSelection.Je.length;
+        
+        // For M: count selected + 1 (always add 1 for MC chef)
+        const mCount = state.customAgentSelection.M.length + 1;
+        
+        // For J: count selected + 1 (always add 1 for JC chef)
+        const jCount = state.customAgentSelection.J.length + 1;
+        
+        // For SN: count selected + 1 (always add 1 for NC chef)
+        const snCount = state.customAgentSelection.SN.length + 1;
+
+        // Update title with current selection counts
+        titleElement.textContent = `Effectif ${jeCount} Je / ${mCount} M / ${jCount} J / ${snCount} SN`;
     }
 });
