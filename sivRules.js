@@ -928,7 +928,7 @@ Sam;période chargée;VFR fort;09h30;3
 Sam;période chargée;VFR fort;09h45;3
 Sam;période chargée;VFR fort;10h00;3
 Sam;période chargée;VFR fort;10h15;3
-Sam;période chargée;VFR fort;10h30;2
+Sam;période chargée;VFR fort;10h30;3
 Sam;période chargée;VFR fort;10h45;3
 Sam;période chargée;VFR fort;11h00;3
 Sam;période chargée;VFR fort;11h15;3

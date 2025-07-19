@@ -781,6 +781,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         updateEffectifTitle(); // Update title when selection changes
         updateDashboard(false);
+        renderHeatmapD3(state.selectedGrid); // Mettre à jour la carte de chaleur
     }
     
     function updateAgentButtonStates() {
@@ -842,44 +843,56 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 1. Préparer les données et trier les vacations
-        const orderedAgents = [];
-        const agentsByType = { Je: [], MC: [], M: [], JC: [], J: [], S: [], NC: [], N: [] };
+        const selectedVacationsSet = new Set([
+            ...state.customAgentSelection.Je,
+            ...state.customAgentSelection.M,
+            ...state.customAgentSelection.J,
+            ...state.customAgentSelection.SN
+        ]);
 
-        gridData.forEach(agent => {
+        // Définir les agents fixes qui doivent toujours être affichés
+        const fixedVacations = ['MC', 'JC', 'NC', 'N#01', 'N#02'];
+        const fixedVacationsSet = new Set(fixedVacations);
+
+        // Filtrer les agents : inclure les fixes ET les sélectionnés
+        const agentsToShow = gridData.filter(agent => 
+            fixedVacationsSet.has(agent.vacation) || selectedVacationsSet.has(agent.vacation)
+        );
+
+        const agentsByType = { Je: [], M: [], J: [], SN: [] }; // Pas de catégories séparées pour MC, JC, NC ici
+
+        agentsToShow.forEach(agent => {
             const vacation = agent.vacation;
             if (vacation.startsWith('Je')) {
                 agentsByType.Je.push(agent);
-            } else if (vacation === 'MC') {
-                agentsByType.MC.push(agent);
             } else if (vacation.startsWith('M')) {
                 agentsByType.M.push(agent);
-            } else if (vacation === 'JC') {
-                agentsByType.JC.push(agent);
             } else if (vacation.startsWith('J')) {
                 agentsByType.J.push(agent);
-            } else if (vacation.startsWith('S')) { // Only S, not SN
-                agentsByType.S.push(agent);
-            } else if (vacation === 'NC') {
-                agentsByType.NC.push(agent);
-            } else if (vacation.startsWith('N')) {
-                agentsByType.N.push(agent);
+            } else if (vacation.startsWith('S') || vacation.startsWith('N')) {
+                agentsByType.SN.push(agent);
             }
         });
 
-        // Sort each group alphabetically by vacation name
+        // Trier chaque groupe par priorité (numérique)
         Object.keys(agentsByType).forEach(key => {
-            agentsByType[key].sort((a, b) => a.vacation.localeCompare(b.vacation));
+            agentsByType[key].sort((a, b) => a.priorite - b.priorite);
         });
 
-        // Add in specified order
-        orderedAgents.push(...agentsByType.Je);
-        orderedAgents.push(...agentsByType.MC); // MC before M
-        orderedAgents.push(...agentsByType.M);
-        orderedAgents.push(...agentsByType.JC); // JC before J
-        orderedAgents.push(...agentsByType.J);
-        orderedAgents.push(...agentsByType.S);
-        orderedAgents.push(...agentsByType.NC);
-        orderedAgents.push(...agentsByType.N);
+        // Construire orderedAgents en plaçant les fixes en premier dans leur groupe
+        const orderedAgents = [];
+
+        // Fonction utilitaire pour ajouter les agents d'un type, avec les fixes en tête
+        const addAgentsInOrder = (typeKey, fixedInGroup) => {
+            const fixed = agentsByType[typeKey].filter(agent => fixedInGroup.includes(agent.vacation));
+            const others = agentsByType[typeKey].filter(agent => !fixedInGroup.includes(agent.vacation));
+            orderedAgents.push(...fixed, ...others);
+        };
+
+        addAgentsInOrder('Je', []); // Pas de fixes spécifiques pour Je
+        addAgentsInOrder('M', ['MC']);
+        addAgentsInOrder('J', ['JC']);
+        addAgentsInOrder('SN', ['NC', 'N#01', 'N#02']);
 
         const yLabels = orderedAgents.map(agent => agent.vacation);
         const heatmapData = [];

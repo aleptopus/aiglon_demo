@@ -172,7 +172,7 @@ td { transition: background-color 0.3s ease; }
 }
 
 #d3-heatmap-container svg {
-    background-color: var(--background);
+    background-color: var(--card-background); /* Utiliser la couleur de fond des cartes */
     border-radius: var(--radius);
     overflow: visible; /* Permet aux labels des axes de ne pas être coupés */
 }
