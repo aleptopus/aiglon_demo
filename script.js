@@ -17,7 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
         avgTma: document.getElementById('avgTma'),
         avgTotal: document.getElementById('avgTotal'),
         chartCanvas: document.getElementById('trafficChart').getContext('2d'),
-        toggleChartBtn: document.getElementById('toggleChartTypeBtn'),
+        chartTitle: document.querySelector('.chart-header h2'), // Ajout de l'élément du titre du graphique
+        toggleStackedBtn: document.getElementById('toggleStackedBtn'),
+        toggleSideBySideBtn: document.getElementById('toggleSideBySideBtn'),
+        toggleUTCBtn: document.getElementById('toggleUTCBtn'),
+        toggleLocalBtn: document.getElementById('toggleLocalBtn'),
         summaryTableHead: document.querySelector('#summaryTable thead'),
         summaryTableBody: document.querySelector('#summaryTable tbody'),
         capacityControlsCard: document.getElementById('capacityControlsCard'),
@@ -63,13 +67,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
         elements.csvFile.addEventListener('change', handleCohorFile);
         elements.jsonFile.addEventListener('change', handleTmaFile);
-        // elements.grilleFile.addEventListener('change', handleGrilleFile); // No longer needed
-        // elements.compoFile.addEventListener('change', handleCompoFile); // No longer needed
-        elements.toggleChartBtn.addEventListener('click', toggleChartStacking);
         [elements.dateStartInput, elements.dateEndInput].forEach(el => el.addEventListener('change', updateFromDateInputs));
         elements.sivSelect.addEventListener('change', () => updateDashboard(false));
         elements.periodSelect.addEventListener('change', handleGridSelection);
-        document.getElementById('toggleTimezoneBtn').addEventListener('click', toggleTimezone);
+        
+        // New event listeners for chart view and timezone buttons
+        elements.toggleStackedBtn.addEventListener('click', () => { state.isStacked = true; updateChartTypeButtons(); updateDashboard(false); });
+        elements.toggleSideBySideBtn.addEventListener('click', () => { state.isStacked = false; updateChartTypeButtons(); updateDashboard(false); });
+        elements.toggleUTCBtn.addEventListener('click', () => { state.useUTC = true; updateTimezoneButtons(); updateDashboard(false); });
+        elements.toggleLocalBtn.addEventListener('click', () => { state.useUTC = false; updateTimezoneButtons(); updateDashboard(false); });
 
     function handleCohorFile(event) {
         console.log("handleCohorFile called");
@@ -111,19 +117,58 @@ document.addEventListener('DOMContentLoaded', () => {
         const dates = [...new Set(state.combinedData.map(d => d.date.getTime()))].sort();
         state.fullDateRange = [new Date(dates[0]), new Date(dates[dates.length - 1])];
         
-        const sevenDaysLater = new Date(state.fullDateRange[0]);
-        sevenDaysLater.setDate(sevenDaysLater.getDate() + 6);
-        state.currentStartDate = state.fullDateRange[0];
-        state.currentEndDate = sevenDaysLater > state.fullDateRange[1] ? state.fullDateRange[1] : sevenDaysLater;
-        state.windowDurationMs = state.currentEndDate.getTime() - state.currentStartDate.getTime();
-        
-        elements.dateStartInput.valueAsDate = state.currentStartDate;
-        elements.dateEndInput.valueAsDate = state.currentEndDate;
+        // Set current date range to today (local Paris time, then convert to UTC for consistency)
+        const now = new Date();
+        const parisTimezone = 'Europe/Paris';
+
+        // Get the current date in Paris timezone as YYYY-MM-DD string for input display
+        const parisDateFormatter = new Intl.DateTimeFormat('en-CA', { // en-CA for YYYY-MM-DD format
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            timeZone: parisTimezone
+        });
+        const todayParisFormatted = parisDateFormatter.format(now); // e.g., "2025-07-19"
+
+        // Set input values directly with the formatted string
+        elements.dateStartInput.value = todayParisFormatted;
+        elements.dateEndInput.value = todayParisFormatted;
+
+        // Create a Date object representing the start of today in UTC, corresponding to Paris local time.
+        // This is done by parsing the YYYY-MM-DD string as a local date, then getting its UTC equivalent.
+        // This ensures that 00:00 Paris time is correctly mapped to its UTC equivalent.
+        const todayLocalParisForInternal = new Date(todayParisFormatted + 'T00:00:00'); // Parse as local time
+        const todayUTCForInternalState = new Date(Date.UTC(
+            todayLocalParisForInternal.getFullYear(),
+            todayLocalParisForInternal.getMonth(),
+            todayLocalParisForInternal.getDate()
+        ));
+
+        state.currentStartDate = todayUTCForInternalState;
+        state.currentEndDate = todayUTCForInternalState; // Single day view by default
+        state.windowDurationMs = 0; // For single day, duration is 0
 
         createToggleButtons();
-        createDateSlider();
-        console.log('initializeDashboard - state.grilleVacations before updateDashboard:', state.grilleVacations);
-        console.log('initializeDashboard - state.compoEquipe before updateDashboard:', state.compoEquipe);
+        // No longer creating date slider
+        
+        // Automatically select the grid for today (based on UTC date, which getPeriodAndDayType will convert to local Paris day type)
+        const { periodCode, dayType } = capacityCalculator.getPeriodAndDayType(todayUTCForInternalState);
+        const todayGridKey = `${dayType}${periodCode}`;
+        
+        // Check if the grid exists in the dropdown options
+        const optionExists = Array.from(elements.periodSelect.options).some(option => option.value === todayGridKey);
+        
+        if (optionExists) {
+            elements.periodSelect.value = todayGridKey;
+            state.selectedGrid = todayGridKey; // Update state as well
+            handleGridSelection(); // Trigger selection logic
+        } else {
+            console.warn(`No grid option found for today's date: ${todayGridKey}. Defaulting to no selection.`);
+            elements.periodSelect.value = ""; // Clear selection if no matching grid
+            state.selectedGrid = null;
+            handleGridSelection(); // Still call to clear agent buttons etc.
+        }
+
+        updateChartTypeButtons(); // Initialize chart type buttons state
+        updateTimezoneButtons();  // Initialize timezone buttons state
         updateDashboard(false);
     }
     
@@ -162,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const makeSlotUTC = (date) => `${String(date.getUTCHours()).padStart(2, '0')}:${String(Math.floor(date.getUTCMinutes() / 15) * 15).padStart(2, '0')}`;
                         
                         flights.push({ 
-                            date: new Date(adjustedDt.getFullYear(), adjustedDt.getMonth(), adjustedDt.getDate()), // Date should be UTC for consistency
+                            date: new Date(Date.UTC(adjustedDt.getUTCFullYear(), adjustedDt.getUTCMonth(), adjustedDt.getUTCDate())), // Date should be UTC for consistency
                             datetime: adjustedDt, // Datetime should be UTC for consistency
                             timeSlot: makeSlotUTC(adjustedDt), // timeSlot should be UTC
                             isArrival: values[colIndices.ad] === 'A' ? 1 : 0, 
@@ -173,8 +218,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (e) { console.warn("Ligne COHOR ignorée:", row, e); }
         });
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        return flights.filter(f => f.date >= today);
+        // Filter flights from today onwards (based on local Paris time converted to UTC)
+        const now = new Date();
+        const parisTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+        const todayLocalParis = new Date(parisTime.getFullYear(), parisTime.getMonth(), parisTime.getDate());
+        const todayUTC = new Date(Date.UTC(todayLocalParis.getFullYear(), todayLocalParis.getMonth(), todayLocalParis.getDate()));
+        return flights.filter(f => f.date >= todayUTC);
     }
     
     function processTmaJSON(jsonText) {
@@ -208,57 +257,59 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.toggle-group input').forEach(cb => cb.addEventListener('change', updateDashboard));
     }
 
-    function createDateSlider() {
-        const [minDate, maxDate] = state.fullDateRange;
-        const containerWidth = elements.dateSliderContainer.clientWidth;
-        if (containerWidth === 0) return; // Don't draw if not visible
-        const margin = { right: 20, left: 20 };
-        const width = containerWidth - margin.left - margin.right;
-        
-        elements.dateSliderContainer.innerHTML = '';
-        const svg = d3.select(elements.dateSliderContainer).append("svg").attr("width", containerWidth).attr("height", 50);
-        const x = d3.scaleTime().domain([minDate, maxDate]).range([0, width]).clamp(true);
-        const slider = svg.append("g").attr("class", "slider").attr("transform", `translate(${margin.left}, 25)`);
-        
-        slider.append("line").attr("class", "slider-track").attr("x1", x.range()[0]).attr("x2", x.range()[1]);
-        slider.append("line").attr("class", "slider-track-inset").attr("x1", x.range()[0]).attr("x2", x.range()[1]);
-        const handle = slider.insert("circle", ".slider-track-overlay").attr("class", "slider-handle").attr("r", 8);
-
-        handle.call(d3.drag()
-            .on("start.interrupt", () => slider.interrupt())
-            .on("drag", (event) => {
-                let newStartDate = x.invert(event.x);
-                let newEndDate = new Date(newStartDate.getTime() + state.windowDurationMs);
-                
-                if (newEndDate > maxDate) {
-                    newEndDate = maxDate;
-                    newStartDate = new Date(newEndDate.getTime() - state.windowDurationMs);
-                }
-                
-                state.currentStartDate = newStartDate;
-                state.currentEndDate = newEndDate;
-                
-                elements.dateStartInput.valueAsDate = state.currentStartDate;
-                elements.dateEndInput.valueAsDate = state.currentEndDate;
-                handle.attr("cx", x(state.currentStartDate));
-                
-                updateDashboard(false);
-            })
-        );
-        updateSliderHandle();
-    }
-
     function updateFromDateInputs() {
-        state.currentStartDate = elements.dateStartInput.valueAsDate;
-        state.currentEndDate = elements.dateEndInput.valueAsDate;
+        // Get selected dates as YYYY-MM-DD strings
+        const startDateString = elements.dateStartInput.value;
+        const endDateString = elements.dateEndInput.value;
+
+        // Convert these strings to Date objects representing the start of the day in UTC
+        // This ensures consistency with how cohorData dates are stored.
+        const selectedStartDateLocal = new Date(startDateString + 'T00:00:00'); // Parse as local time
+        const selectedEndDateLocal = new Date(endDateString + 'T00:00:00');   // Parse as local time
+
+        state.currentStartDate = new Date(Date.UTC(
+            selectedStartDateLocal.getFullYear(),
+            selectedStartDateLocal.getMonth(),
+            selectedStartDateLocal.getDate()
+        ));
+        state.currentEndDate = new Date(Date.UTC(
+            selectedEndDateLocal.getFullYear(),
+            selectedEndDateLocal.getMonth(),
+            selectedEndDateLocal.getDate()
+        ));
+
+        // Si la date de fin est le jour suivant la date de début, forcez la date de fin à être la même que la date de début
+        const oneDay = 24 * 60 * 60 * 1000;
+        if (state.currentEndDate.getTime() - state.currentStartDate.getTime() === oneDay) {
+            state.currentEndDate = new Date(state.currentStartDate);
+            elements.dateEndInput.value = elements.dateStartInput.value; // Mettre à jour l'input visuellement
+        }
+
         state.windowDurationMs = state.currentEndDate.getTime() - state.currentStartDate.getTime();
         
         if (isTransitionPeriod(state.currentStartDate, state.currentEndDate)) {
             alert("La période sélectionnée chevauche un changement d'heure. Veuillez sélectionner une période entièrement en heure d'été ou d'hiver.");
             return;
         }
+        
+        // Automatically select the grid for the current start date
+        const { periodCode, dayType } = capacityCalculator.getPeriodAndDayType(state.currentStartDate);
+        const newGridKey = `${dayType}${periodCode}`;
+        
+        // Check if the grid exists in the dropdown options
+        const optionExists = Array.from(elements.periodSelect.options).some(option => option.value === newGridKey);
+        
+        if (optionExists) {
+            elements.periodSelect.value = newGridKey;
+            state.selectedGrid = newGridKey; // Update state as well
+            handleGridSelection(); // Trigger selection logic
+        } else {
+            console.warn(`No grid option found for selected date: ${newGridKey}. Defaulting to no selection.`);
+            elements.periodSelect.value = ""; // Clear selection if no matching grid
+            state.selectedGrid = null;
+            handleGridSelection(); // Still call to clear agent buttons etc.
+        }
 
-        updateSliderHandle();
         updateDashboard(false);
     }
 
@@ -274,16 +325,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return false;
     }
     
-    function updateSliderHandle() {
-        if (!state.fullDateRange[0] || elements.dateSliderContainer.clientWidth === 0) return;
-        const x = d3.scaleTime().domain(state.fullDateRange).range([0, elements.dateSliderContainer.clientWidth - 40]);
-        d3.select(".slider-handle").attr("cx", x(state.currentStartDate));
-    }
-
     // --- Dashboard Update Logic ---
     function updateDashboard(redrawSlider = true) {
         if (state.combinedData.length === 0) return;
-        if (redrawSlider) createDateSlider();
+        // No longer creating date slider
+        // if (redrawSlider) createDateSlider(); // Removed
 
         const activeDays = [...elements.dayToggles.querySelectorAll('input:checked')].map(cb => parseInt(cb.value));
         const filtered = state.combinedData.filter(d => {
@@ -291,7 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return d.date >= state.currentStartDate && d.date <= state.currentEndDate && activeDays.includes(dayOfWeek);
         });
         
-        // const isSingleDay = state.currentStartDate.toDateString() === state.currentEndDate.toDateString(); // Removed as per user request
         console.log('updateDashboard - state.grilleVacations:', state.grilleVacations);
         console.log('updateDashboard - state.compoEquipe:', state.compoEquipe);
         const hasCapacityData = Object.keys(state.grilleVacations).length > 0 && Object.keys(state.compoEquipe).length > 0;
@@ -310,20 +355,32 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSummaryTable(filtered, activeDays);
     }
     
-    function toggleChartStacking() {
-        state.isStacked = !state.isStacked;
-        elements.toggleChartBtn.textContent = state.isStacked ? 'Vue Côte à Côte' : 'Vue Empilée';
-        updateDashboard(false);
+    function updateChartTypeButtons() {
+        if (state.isStacked) {
+            elements.toggleStackedBtn.classList.add('selected');
+            elements.toggleSideBySideBtn.classList.remove('selected');
+        } else {
+            elements.toggleStackedBtn.classList.remove('selected');
+            elements.toggleSideBySideBtn.classList.add('selected');
+        }
     }
-    
-    function toggleTimezone() {
-        state.useUTC = !state.useUTC;
-        document.getElementById('toggleTimezoneBtn').textContent = state.useUTC ? 'UTC' : 'Local';
-        updateDashboard(false);
+
+    function updateTimezoneButtons() {
+        if (state.useUTC) {
+            elements.toggleUTCBtn.classList.add('selected');
+            elements.toggleLocalBtn.classList.remove('selected');
+        } else {
+            elements.toggleUTCBtn.classList.remove('selected');
+            elements.toggleLocalBtn.classList.add('selected');
+        }
     }
 
     function updateMainChart(data, showCapacity) { // showCapacity is now always true if hasCapacityData
         const numDays = new Set(data.map(d => d.date.toDateString())).size || 1;
+        
+        // Mettre à jour le titre du graphique avec le nombre de jours
+        elements.chartTitle.textContent = `Trafic moyen par créneau horaire (Nombre de jours: ${numDays})`;
+
         const slotData = new Map();
         
         // Generate slots for internal data processing (always UTC)
@@ -447,9 +504,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 },
                                 label: function(context) { return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}`; },
                                 footer: function(context) {
-                                    let total = 0;
-                                    context.forEach(item => { if (!item.dataset.hidden) { total += item.parsed.y; } });
-                                    return `\nTotal: ${total.toFixed(1)}`;
+                                    let totalTrafic = 0;
+                                    context.forEach(item => {
+                                        // Seulement additionner les types de trafic (barres)
+                                        if (item.dataset.type === 'bar' && !item.dataset.hidden) {
+                                            totalTrafic += item.parsed.y;
+                                        }
+                                    });
+                                    return `\nTMA total: ${totalTrafic.toFixed(1)}`;
                                 }
                             }
                         }
@@ -944,10 +1006,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 7. Légende
         const legendData = [
-            { value: '1', label: 'Actif (1)', color: 'rgba(128, 0, 128, 0.7)' },
-            { value: 'C', label: 'Chef (C)', color: 'rgba(255, 0, 0, 0.7)' },
-            { value: 'P', label: 'Pause (P)', color: 'rgba(135, 206, 235, 0.7)' },
-            { value: 'R', label: 'Repos (R)', color: 'rgba(255, 165, 0, 0.7)' }
+            { value: '1', label: 'Actif', color: 'rgba(128, 0, 128, 0.7)' },
+            { value: 'C', label: 'Chef', color: 'rgba(255, 0, 0, 0.7)' },
+            { value: 'P', label: 'Pause', color: 'rgba(135, 206, 235, 0.7)' },
+            { value: 'R', label: 'Repos', color: 'rgba(255, 165, 0, 0.7)' }
         ];
 
         const legend = container.append("div")

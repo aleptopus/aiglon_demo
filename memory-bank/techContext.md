@@ -17,8 +17,9 @@
 *   **Frontend-only**: All data processing must occur in the browser. This implies limitations on data volume and complexity of computations.
 *   **CSV/JSON Input**: Data is expected in specific CSV (semicolon-separated) and JSON formats.
 *   **Timezone Handling**: Attention il y a un mélange entre les heures locales (Paris) et UTC. Voici les bases: Les données COHOR sont en UTC, les données trafic TMA sont en UTC, 
-les données grilles d'armement (vacationGrids.js) sont en heure locale, les données des grilles SIV (sivRules.js) sont en UTC. Il faut trouver un méthode pour définir et pouvoir basculer 
+les données grilles d'armement (vacationGrids.js) sont en heure locale. Les données des grilles SIV (`sivRules.js`) sont maintenant interprétées en **heure locale de Paris** pour la recherche des règles, afin de gérer correctement les transitions d'heure d'été/hiver. Il faut trouver un méthode pour définir et pouvoir basculer 
 dans l'interface facilement entre heure locale et UTC. Vérifie pour les données TMA j'ai l'impression qu'il n'ajoute pas avec le bon fuseau horaire.
+*   **Problème SIV et DST** : La grille `sivRules.js` ne gère pas les transitions d'heure d'été/hiver, ce qui peut affecter la précision des réductions SIV pour les périodes à cheval sur ces changements. (NOTE: Ce problème est maintenant résolu par l'interprétation des règles SIV en heure locale.)
 
 ## Dependencies
 *   `d3.v7.min.js`: Included via CDN.

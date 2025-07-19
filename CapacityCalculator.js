@@ -73,9 +73,12 @@ class CapacityCalculator {
 
   getPeriodAndDayType(date) {
     const dateObj = new Date(date);
-    // Convert to UTC for consistent period/daytype calculation
+    // Get month and day based on UTC for period calculation (periods are fixed dates)
     const monthDay = `${String(dateObj.getUTCMonth() + 1).padStart(2, '0')}-${String(dateObj.getUTCDate()).padStart(2, '0')}`;
-    const weekday = dateObj.getUTCDay(); // 0=Dim, 6=Sam
+    
+    // Get weekday based on local Paris time for day type (Sem/Sam/Dim)
+    const localParisDate = new Date(dateObj.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const weekday = localParisDate.getDay(); // 0=Dim, 6=Sam
     
     let period = null;
     for (const [name, ranges] of Object.entries(this.periods)) {
@@ -162,8 +165,11 @@ class CapacityCalculator {
       return {};
     }
     
-    if (customSelection) {
-      // Utiliser la sélection personnalisée fournie par l'interface
+    // Si customSelection est fourni et contient des sélections (non vide), l'utiliser.
+    // customSelection est un objet { Je: [...], M: [...], ... }
+    const hasCustomSelection = customSelection && Object.values(customSelection).some(arr => arr.length > 0);
+
+    if (hasCustomSelection) {
       const agentProfiles = {};
       let index = 0;
       
@@ -183,7 +189,7 @@ class CapacityCalculator {
       return agentProfiles;
     }
     
-    // Sélection automatique par défaut: 3 Je + 8 M + 8 J + 8 SN (par ordre de priorité)
+    // Sélection automatique par défaut: 3 Je / 7 M / 7 J / 8 SN (par ordre de priorité)
     const agentsByType = this.getAgentsByType(gridData);
     const agentProfiles = {};
     let index = 0;
@@ -204,23 +210,23 @@ class CapacityCalculator {
       agentProfiles[index++] = profile;
     });
     
-    // 7 M (après MC) - Configuration spécifique pour le test
-    agentsByType.M.slice(0, 7 - agentsByType.MC.length).forEach(profile => {
+    // 7 M (après MC)
+    agentsByType.M.filter(p => p.vacation !== 'MC').slice(0, 7).forEach(profile => {
       agentProfiles[index++] = profile;
     });
     
-    // 8 J (après JC)
-    agentsByType.J.slice(0, 8 - agentsByType.JC.length).forEach(profile => {
+    // 7 J (après JC)
+    agentsByType.J.filter(p => p.vacation !== 'JC').slice(0, 7).forEach(profile => {
       agentProfiles[index++] = profile;
     });
     
-    // 7 SN (après NC et N) - Configuration spécifique pour le test
-    const nonNightSN = agentsByType.SN.filter(p => !p.vacation.startsWith('N'));
-    nonNightSN.slice(0, 7 - agentsByType.NC.length - nightAgents.slice(0, 2).length).forEach(profile => {
+    // 8 SN (après NC et N)
+    const nonNightSN = agentsByType.SN.filter(p => !p.vacation.startsWith('N') && p.vacation !== 'NC');
+    nonNightSN.slice(0, 8).forEach(profile => {
       agentProfiles[index++] = profile;
     });
     
-    console.log(`✓ Sélection automatique: ${Object.keys(agentProfiles).length} agents mappés (3 Je + 7 M + 8 J + 7 SN).`);
+    console.log(`✓ Sélection automatique: ${Object.keys(agentProfiles).length} agents mappés (3 Je + 7 M + 7 J + 8 SN).`);
     return agentProfiles;
   }
 
@@ -248,16 +254,24 @@ class CapacityCalculator {
     const sivPeriod = this.sivPeriodMapping[periodCode];
     
     // Convert to UTC for SIV rules lookup
-    const utcHours = timestamp.getUTCHours();
-    const utcMinutes = timestamp.getUTCMinutes();
-    console.log(`Debug in getSIVReduction: timestamp.getUTCMinutes() = ${utcMinutes}`); // Add this line
-    const hourMinute = `${String(utcHours).padStart(2, '0')}h${String(utcMinutes).padStart(2, '0')}`;
+    // Convert UTC timestamp to local Paris time for SIV rule lookup
+    const localTimeOptions = { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Paris' };
+    const localTimeParts = new Intl.DateTimeFormat('en-US', localTimeOptions).formatToParts(timestamp);
+    
+    const localHours = localTimeParts.find(p => p.type === 'hour').value;
+    const localMinutes = localTimeParts.find(p => p.type === 'minute').value;
+    const hourMinute = `${localHours}h${localMinutes}`;
 
     const rule = this.sivRules[dayType]?.[sivPeriod]?.[sivHypothesis]?.[hourMinute];
     
-    // Debugging SIV rule lookup
-    console.log(`SIV Lookup: dayType=${dayType}, sivPeriod=${sivPeriod}, sivHypothesis=${sivHypothesis}, hourMinute=${hourMinute}`);
-    console.log(`Rule found: ${rule}`);
+    // Enhanced Debugging for SIV rule lookup
+    console.log(`[SIV DEBUG] Lookup for timestamp: ${timestamp.toISOString()} (UTC) -> ${hourMinute} (Local Paris)`);
+    console.log(`           - Key Parts: dayType='${dayType}', sivPeriod='${sivPeriod}', sivHypothesis='${sivHypothesis}', hourMinute='${hourMinute}'`);
+    if (rule !== undefined) {
+      console.log(`           - SUCCESS: Found rule. Reduction = ${rule}`);
+    } else {
+      console.warn(`           - FAILURE: No rule found for these keys.`);
+    }
 
     return rule !== undefined ? rule : 0;
   }
@@ -283,8 +297,8 @@ class CapacityCalculator {
           count++;
         }
       }
-      // Si on n'a pas 4 valeurs (fin de journée), on ne calcule pas la moyenne (ou on met 0)
-      averagedSeries[i] = count === 4 ? parseFloat((sum / 4).toFixed(2)) : 0;
+      // Si on n'a pas 4 valeurs (fin de journée), on calcule la moyenne sur les valeurs disponibles
+      averagedSeries[i] = count > 0 ? parseFloat((sum / count).toFixed(2)) : 0;
     }
     return averagedSeries;
   }
@@ -354,7 +368,7 @@ class CapacityCalculator {
 
     for (let i = 0; i < 96; i++) { // Iterate through 15-minute intervals of the day
       const currentTimestamp = new Date(date);
-      // Créer un timestamp UTC pour le début de la journée
+      // Créer un timestamp UTC pour le début de la journée en utilisant les composants locaux de la date
       const utcTimestamp = new Date(Date.UTC(currentTimestamp.getFullYear(), currentTimestamp.getMonth(), currentTimestamp.getDate(), 0, 0, 0));
       utcTimestamp.setUTCMinutes(i * 15); // Ajouter les minutes pour le créneau actuel
 
@@ -422,6 +436,7 @@ class CapacityCalculator {
       return { capacities: Array(96).fill(0), effectiveAgents: Array(96).fill(0) };
     }
 
+    // Use the provided customSelection directly for the selected grid
     const selectedAgentProfiles = this.selectAgentProfiles(grid, customSelection);
     console.log('Selected Agent Profiles:', selectedAgentProfiles);
     if (Object.keys(selectedAgentProfiles).length === 0) {
@@ -429,29 +444,26 @@ class CapacityCalculator {
       return { capacities: Array(96).fill(0), effectiveAgents: Array(96).fill(0) };
     }
 
-    const effectiveAgents15Min = []; // Effective agents for each 15-minute slot
-    
-    for (let i = 0; i < 96; i++) {
-      // Créer un timestamp UTC pour le début de la journée
-      const utcTimestamp = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate(), 0, 0, 0));
-      utcTimestamp.setUTCMinutes(i * 15);
+    const effectiveAgents15Min = []; // Store effective agents for the current day
 
-      // Appliquer le décalage DST pour obtenir l'heure locale correcte
-      // L'offset doit être basé sur le timestamp UTC du créneau, pas seulement la startDate
-      const offset = this.getDSTOffset(utcTimestamp);
-      // Utiliser Intl.DateTimeFormat pour une conversion précise en heure locale de Paris
+    for (let i = 0; i < 96; i++) { // Iterate through 15-minute intervals of the current day (96 slots)
+      const currentUtcTimestamp = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0));
+      currentUtcTimestamp.setUTCMinutes(i * 15);
+
+      // Determine period and day type for the current timestamp (should be consistent with the selected grid)
+      const { periodCode: currentPeriodCode, dayType: currentDayType } = this.getPeriodAndDayType(currentUtcTimestamp);
+      
+      // Convert UTC timestamp to local Paris time for grid lookup
       const localTimeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Europe/Paris' };
-      const localTimeParts = new Intl.DateTimeFormat('en-US', localTimeOptions).formatToParts(utcTimestamp);
+      const localTimeParts = new Intl.DateTimeFormat('en-US', localTimeOptions).formatToParts(currentUtcTimestamp);
       
       const localHour = localTimeParts.find(p => p.type === 'hour').value;
       const localMinute = localTimeParts.find(p => p.type === 'minute').value;
-      const localSecond = localTimeParts.find(p => p.type === 'second').value; // Should be '00'
+      const localSecond = localTimeParts.find(p => p.type === 'second').value;
       const hourMinuteStr = `${localHour}:${localMinute}:${localSecond}`;
       
-      console.log(`Processing slot (UTC): ${utcTimestamp.toISOString()}, Local grid time (Paris): ${hourMinuteStr}`);
-      
-      const agentsAtThisSlot = this.countActiveAgents(selectedAgentProfiles, hourMinuteStr);
-      const sivReduction = this.getSIVReduction(periodCode, dayType, utcTimestamp, sivHypothesis);
+      const agentsAtThisSlot = this.countActiveAgents(selectedAgentProfiles, hourMinuteStr); // Use selectedAgentProfiles directly
+      const sivReduction = this.getSIVReduction(currentPeriodCode, currentDayType, currentUtcTimestamp, sivHypothesis);
       const effectiveAgents = Math.max(0, agentsAtThisSlot - sivReduction);
       
       // Log de validation pour SIV fermé
@@ -467,6 +479,14 @@ class CapacityCalculator {
 
     // Appliquer la moyenne glissante sur la capacité (fenêtre de 1h)
     const averagedCapacities = this.applyHourlyAverage(capacities15Min);
+
+    // Appliquer la règle de capacité forcée à 6 entre 23h00 et 01h00 UTC
+    for (let i = 0; i < averagedCapacities.length; i++) {
+      const utcHour = Math.floor(i / 4); // Convert index to UTC hour
+      if (utcHour === 23 || utcHour === 0) { // 23h00-23h45 et 00h00-00h45 UTC
+        averagedCapacities[i] = 6; // Forcer la capacité à 6
+      }
+    }
 
     return {
       capacities: averagedCapacities,

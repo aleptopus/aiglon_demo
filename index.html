@@ -80,22 +80,26 @@
                                 <label for="dateEndInput">Fin:</label>
                                 <input type="date" id="dateEndInput" disabled>
                             </div>
-                            <div id="date-slider-container"></div>
                         </div>
                         <div class="toggles-container">
                             <div class="filter-group-vertical">
                                 <label for="periodSelect">Grille de vacation</label>
                                 <select id="periodSelect" class="select-dropdown">
-                                    <option value="">Sélectionner une grille...</option>
-                                    <option value="SemCha">Semaine Chargée</option>
-                                    <option value="SamCha">Samedi Chargé</option>
-                                    <option value="DimCha">Dimanche Chargée</option>
-                                    <option value="SemCre">Semaine Creuse</option>
-                                    <option value="SamCre">Samedi Creux</option>
-                                    <option value="DimCre">Dimanche Creux</option>
-                                    <option value="SemHiv">Semaine Hiver</option>
-                                    <option value="SamHiv">Samedi Hiver</option>
-                                    <option value="DimHiv">Dimanche Hiver</option>
+                                    <optgroup label="Période Chargée">
+                                        <option value="SemCha">Semaine Chargée</option>
+                                        <option value="SamCha">Samedi Chargé</option>
+                                        <option value="DimCha">Dimanche Chargée</option>
+                                    </optgroup>
+                                    <optgroup label="Période Creuse">
+                                        <option value="SemCre">Semaine Creuse</option>
+                                        <option value="SamCre">Samedi Creux</option>
+                                        <option value="DimCre">Dimanche Creux</option>
+                                    </optgroup>
+                                    <optgroup label="Période Hiver">
+                                        <option value="SemHiv">Semaine Hiver</option>
+                                        <option value="SamHiv">Samedi Hiver</option>
+                                        <option value="DimHiv">Dimanche Hiver</option>
+                                    </optgroup>
                                 </select>
                             </div>
                             <div class="filter-group-vertical">
@@ -111,11 +115,14 @@
                     
                     <div class="card">
                         <div class="chart-header">
+                            <div class="chart-controls-group chart-controls-left">
+                                <button id="toggleStackedBtn" class="button-secondary selected">Vue Empilée</button>
+                                <button id="toggleSideBySideBtn" class="button-secondary">Vue Côte à Côte</button>
+                            </div>
                             <h2 class="card-title">Trafic moyen par créneau horaire</h2>
-                            <div>
-                                <button id="toggleChartTypeBtn" class="button-secondary">Vue Côte à Côte</button>
-                                <!-- Nouveau bouton de bascule UTC/local -->
-                                <button id="toggleTimezoneBtn" class="button-secondary">UTC</button>
+                            <div class="chart-controls-group chart-controls-right">
+                                <button id="toggleUTCBtn" class="button-secondary selected">UTC</button>
+                                <button id="toggleLocalBtn" class="button-secondary">Heure locale</button>
                             </div>
                         </div>
                         <div class="chart-container">
