@@ -13,6 +13,7 @@
     *   Modification du tooltip du graphique pour afficher "TMA total" (somme des arrivées, départs, TMA) au lieu du total général (trafic + capacité).
 *   **Correction du filtre de date et de la sélection de grille par défaut :** Résolu. L'application affiche désormais correctement les données du jour sélectionné (par exemple, le 19 juillet pour un samedi) avec la grille de vacation appropriée ("Samedi Chargé") et la date de fin est automatiquement ajustée pour correspondre à la date de début si une plage d'un seul jour est souhaitée.
 *   **Correction de l'incohérence du calcul de capacité (45 au lieu de 40) :** Résolu. La logique de sélection des agents a été ajustée pour respecter la sélection personnalisée de l'utilisateur et la sélection automatique par défaut a été alignée sur les attentes de l'utilisateur (3 Je / 7 M / 7 J / 8 SN).
+*   **Correction des calculs de filtre et des moyennes de trafic dans le graphique :** Résolu. Les calculs de nombre de jours et de moyennes de trafic sont maintenant corrects et cohérents grâce à l'utilisation systématique des dates UTC pour toutes les opérations de date pertinentes.
 
 **Ce qui reste à construire :**
 

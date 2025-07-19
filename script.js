@@ -240,9 +240,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function combineAllData() {
-        const getDayType = (date) => DAYS_OF_WEEK[(date.getDay() + 6) % 7];
+        const getDayType = (date) => DAYS_OF_WEEK[(date.getUTCDay() + 6) % 7];
         state.combinedData = state.cohorData.map(flight => {
-            const month = flight.datetime.getMonth() + 1;
+            const month = flight.datetime.getUTCMonth() + 1;
             const dayType = getDayType(flight.datetime);
             const tmaKey = `${month}-${dayType}-${flight.timeSlot}`;
             const tmaValue = state.tmaMap.get(tmaKey) || 0;
@@ -333,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const activeDays = [...elements.dayToggles.querySelectorAll('input:checked')].map(cb => parseInt(cb.value));
         const filtered = state.combinedData.filter(d => {
-            const dayOfWeek = (d.datetime.getDay() + 6) % 7;
+            const dayOfWeek = (d.datetime.getUTCDay() + 6) % 7;
             return d.date >= state.currentStartDate && d.date <= state.currentEndDate && activeDays.includes(dayOfWeek);
         });
         
@@ -376,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateMainChart(data, showCapacity) { // showCapacity is now always true if hasCapacityData
-        const numDays = new Set(data.map(d => d.date.toDateString())).size || 1;
+        const numDays = new Set(data.map(d => d.date.toISOString().slice(0, 10))).size || 1;
         
         // Mettre à jour le titre du graphique avec le nombre de jours
         elements.chartTitle.textContent = `Trafic moyen par créneau horaire (Nombre de jours: ${numDays})`;
@@ -546,10 +546,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateSummaryCards(data) {
-        const numDays = new Set(data.map(d => d.date.toDateString())).size || 1;
+        const numDays = new Set(data.map(d => d.date.toISOString().slice(0, 10))).size || 1;
         const totals = data.reduce((acc, d) => { acc.isArrival += d.isArrival; acc.isDeparture += d.isDeparture; return acc; }, { isArrival: 0, isDeparture: 0, tma: 0 });
         const tmaTracker = new Set();
-        data.forEach(d => { if (d.tma > 0 && !tmaTracker.has(`${d.date.toDateString()}-${d.timeSlot}`)) { totals.tma += d.tma; tmaTracker.add(`${d.date.toDateString()}-${d.timeSlot}`); } });
+        data.forEach(d => { if (d.tma > 0 && !tmaTracker.has(`${d.date.toISOString().slice(0, 10)}-${d.timeSlot}`)) { totals.tma += d.tma; tmaTracker.add(`${d.date.toISOString().slice(0, 10)}-${d.timeSlot}`); } });
         
         const getAvg = (key) => (totals[key] / numDays).toFixed(1);
         
@@ -563,11 +563,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const dailyAggregates = new Map();
         for (let i = 0; i < 7; i++) {
             if (activeDays.includes(i)) {
-                const daysOfType = data.filter(d => (d.datetime.getDay() + 6) % 7 === i);
-                const numDaysOfType = new Set(daysOfType.map(d => d.date.toDateString())).size || 1;
+                const daysOfType = data.filter(d => (d.datetime.getUTCDay() + 6) % 7 === i);
+                const numDaysOfType = new Set(daysOfType.map(d => d.date.toISOString().slice(0, 10))).size || 1;
                 const totals = daysOfType.reduce((acc, d) => { acc.isDeparture += d.isDeparture; acc.isArrival += d.isArrival; return acc; }, { isDeparture: 0, isArrival: 0, tma: 0 });
                 const tmaTracker = new Set();
-                daysOfType.forEach(d => { if (d.tma > 0 && !tmaTracker.has(`${d.date.toDateString()}-${d.timeSlot}`)) { totals.tma += d.tma; tmaTracker.add(`${d.date.toDateString()}-${d.timeSlot}`); } });
+                daysOfType.forEach(d => { if (d.tma > 0 && !tmaTracker.has(`${d.date.toISOString().slice(0, 10)}-${d.timeSlot}`)) { totals.tma += d.tma; tmaTracker.add(`${d.date.toISOString().slice(0, 10)}-${d.timeSlot}`); } });
                 dailyAggregates.set(i, { 'Départs': totals.isDeparture / numDaysOfType, 'Arrivées': totals.isArrival / numDaysOfType, 'TMA': totals.tma / numDaysOfType, 'Total': (totals.isDeparture + totals.isArrival + totals.tma) / numDaysOfType });
             }
         }
