@@ -902,10 +902,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // 2. Configuration du SVG et des dimensions
-        const margin = { top: 50, right: 20, bottom: 50, left: 80 };
-        const cellSize = 15; // Taille d'une cellule carrée
-        const width = 96 * cellSize + margin.left + margin.right;
-        const height = yLabels.length * cellSize + margin.top + margin.bottom;
+        const margin = { top: 50, right: 20, bottom: 50, left: 300 }; // Augmenter la marge gauche pour les labels
+        const numSlots = 96; // 24 heures * 4 créneaux/heure
+
+        // Calculer la largeur disponible du conteneur
+        const containerWidth = parseInt(container.style("width")) || document.getElementById('d3-heatmap-container').clientWidth;
+        
+        // Calculer la taille de cellule dynamique
+        // La largeur totale des cellules + padding doit être égale à la largeur disponible - marges
+        const dynamicCellSize = (containerWidth - margin.left - margin.right) / numSlots;
+        const cellSize = Math.max(10, dynamicCellSize); // Taille minimale pour la lisibilité
+
+        const width = numSlots * cellSize;
+        const height = yLabels.length * cellSize;
+
+        console.log('Heatmap dimensions:');
+        console.log('  containerWidth:', containerWidth);
+        console.log('  margin.left:', margin.left);
+        console.log('  cellSize:', cellSize);
+        console.log('  width (cells):', width);
+        console.log('  height (labels):', height);
+        console.log('  yLabels:', yLabels);
 
         // Mapping des codes de grille vers des noms lisibles
         const gridNameMapping = {
@@ -924,19 +941,19 @@ document.addEventListener('DOMContentLoaded', () => {
         container.append("h2").text(`Détails des vacations de la période ${displayGridName}`).attr("class", "card-title");
 
         const svg = container.append("svg")
-            .attr("width", width)
-            .attr("height", height)
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
         // 3. Échelles
         const x = d3.scaleBand()
-            .range([0, 96 * cellSize])
-            .domain(d3.range(96))
+            .range([0, width])
+            .domain(d3.range(numSlots))
             .paddingInner(0.05);
 
         const y = d3.scaleBand()
-            .range([0, yLabels.length * cellSize])
+            .range([0, height])
             .domain(yLabels)
             .paddingInner(0.05);
 
@@ -974,7 +991,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 5. Axes
         const xAxis = d3.axisBottom(x)
-            .tickValues(d3.range(0, 96, 4)) // Toutes les heures (0, 4, 8, ...)
+            .tickValues(d3.range(0, numSlots, 4)) // Toutes les heures (0, 4, 8, ...)
             .tickFormat(d => {
                 const hour = Math.floor(d / 4) + 4; // Convertir l'index en heure (décalage de 4h)
                 return `${String(hour % 24).padStart(2, '0')}h`;
@@ -984,20 +1001,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         svg.append("g")
             .attr("class", "x-axis")
-            .attr("transform", `translate(0, ${yLabels.length * cellSize})`)
+            .attr("transform", `translate(0, ${height})`)
             .call(xAxis);
 
         svg.append("g")
             .attr("class", "y-axis")
-            .call(yAxis);
+            .call(yAxis)
+            .selectAll("text") // Sélectionne le texte de l'axe Y
+            .attr("text-anchor", "end") // Aligne le texte à la fin (à droite de la ligne de l'axe)
+            .attr("dx", "-1em") // Décalage horizontal pour éloigner le texte de l'axe
+            .attr("dy", d => y.bandwidth() / 2 + 4) // Ajustement vertical pour centrer le texte et le décaler légèrement vers le bas
+            .style("font-size", "12px") // Augmenter la taille de la police
+            .style("fill", "var(--text-secondary)")
+            .style("background-color", "transparent"); // Retirer le background-color de débogage
 
         // Style des axes
         svg.selectAll(".x-axis text")
             .style("fill", "var(--text-secondary)");
-        svg.selectAll(".y-axis text")
-            .style("fill", "var(--text-secondary)");
         svg.selectAll(".x-axis path, .x-axis line, .y-axis path, .y-axis line")
-            .style("stroke", "var(--text-secondary)");
+            .style("stroke", "var(--border)"); // Utiliser la couleur de bordure pour les lignes d'axe
 
         // 6. Tooltip
         const tooltip = d3.select("body").append("div")
@@ -1021,6 +1043,18 @@ document.addEventListener('DOMContentLoaded', () => {
             .attr("class", "legend-item")
             .html(d => `<span class="legend-color" style="background-color: ${d.color};"></span><span>${d.label}</span>`);
     }
+
+    // Add resize listener for heatmap
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            const selectedGridKey = elements.periodSelect.value;
+            if (selectedGridKey) {
+                renderHeatmapD3(selectedGridKey);
+            }
+        }, 250); // Debounce for 250ms
+    });
 
     function getVacationStatusName(code) {
         const types = {

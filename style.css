@@ -184,7 +184,6 @@ td { transition: background-color 0.3s ease; }
 }
 
 .x-axis text, .y-axis text {
-    font-size: 10px;
     fill: var(--text-secondary);
 }
 
