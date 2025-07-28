@@ -292,4 +292,94 @@ td { transition: background-color 0.3s ease; }
     text-shadow: 0 0 5px #000;
 }
 
+/* --- Predict NM Specific Styles --- */
+#predictNMSummaryCard {
+    margin-top: 1.5rem;
+}
+
+#predictNMSummaryContent ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    color: var(--text-secondary);
+}
+
+#predictNMSummaryContent li {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+#predictNMSummaryContent li strong {
+    color: var(--text-primary);
+}
+
+#predictNMTableCard {
+    margin-top: 1.5rem;
+}
+
+#predictNMTableCard .controls-row {
+    margin-bottom: 1rem;
+    justify-content: center;
+    align-items: center;
+}
+
+#predictNMTableCard .controls-row label {
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-right: 0.5rem;
+}
+
+#predictNMFilterInput {
+    background-color: var(--background);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 4px);
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    width: 100%;
+    max-width: 300px; /* Limiter la largeur du champ de recherche */
+}
+
+#predictNMTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#predictNMTable th,
+#predictNMTable td {
+    padding: 0.6rem 0.8rem;
+    text-align: left; /* Alignement à gauche pour les colonnes de texte */
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+}
+
+#predictNMTable th {
+    font-weight: 600;
+    color: var(--text-secondary);
+    background-color: rgba(0,0,0,0.2);
+    text-align: center; /* Centrer les titres de colonnes */
+}
+
+#predictNMTable td {
+    transition: background-color 0.3s ease;
+    color: var(--text-primary); /* Couleur du texte par défaut pour les cellules */
+}
+
+/* Styles pour les couleurs de fond des cellules du tableau Predict NM (transparence 0.15) */
+/* Ces couleurs sont définies dynamiquement en JS, mais voici un exemple pour référence si besoin */
+/* .predict-nm-cell-arrival-ll { background-color: rgba(0, 128, 0, 0.15); } */
+/* .predict-nm-cell-departure-ll { background-color: rgba(255, 0, 0, 0.15); } */
+
+/* --- Toggle Button for Predict NM Table --- */
+.toggle-button {
+    margin-left: 10px; /* Espace entre le titre et le bouton */
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8rem;
+    vertical-align: middle;
+}
+
+#predictNMTableContainer.hidden {
+    display: none;
+}
+
 /* --- Responsive --- */

@@ -1,30 +1,22 @@
-# Technical Context: Aiglon Futé Dashboard
+# Tech Context: Aiglon Futé Dashboard
 
-## Technologies Used
-*   **HTML5**: For structuring the web content.
-*   **CSS3**: For styling the dashboard, including a dark theme.
-*   **JavaScript (ES6+)**: Core programming language for all frontend logic.
-*   **D3.js (v7)**: JavaScript library for data-driven documents, specifically used for the interactive date slider.
-*   **Chart.js**: JavaScript charting library for visualizing traffic and capacity data.
-*   **FileReader API**: For client-side file reading (COHOR CSV, TMA JSON).
+## Frontend Technologies
+*   **HTML5**: For structuring the dashboard interface.
+*   **CSS3**: For styling the dashboard, including responsive design and visual elements.
+*   **JavaScript (ES6+)**: For all client-side logic, including data manipulation, DOM interaction, and API calls.
+*   **Chart.js**: Used for rendering dynamic and interactive traffic charts (e.g., stacked bar charts).
+*   **D3.js**: Utilized for creating the heatmap visualization of agent vacation schedules.
+*   **Puppeteer**: Used by the Cline environment for browser automation and testing.
 
-## Development Setup
-*   **Local Development Server**: Any simple static file server can host the `index.html` and associated assets.
-*   **Browser Compatibility**: Developed for modern web browsers (Chrome, Firefox, Edge, Safari).
-*   **No Build Tools**: The project does not use complex build tools like Webpack or Babel. All JavaScript is directly included via `<script>` tags.
-
-## Technical Constraints
-*   **Frontend-only**: All data processing must occur in the browser. This implies limitations on data volume and complexity of computations.
-*   **CSV/JSON Input**: Data is expected in specific CSV (semicolon-separated) and JSON formats.
-*   **Timezone Handling**: Attention il y a un mélange entre les heures locales (Paris) et UTC. Voici les bases: Les données COHOR sont en UTC, les données trafic TMA sont en UTC, 
-les données grilles d'armement (vacationGrids.js) sont en heure locale. Les données des grilles SIV (`sivRules.js`) sont maintenant interprétées en **heure locale de Paris** pour la recherche des règles, afin de gérer correctement les transitions d'heure d'été/hiver. Il faut trouver un méthode pour définir et pouvoir basculer 
-dans l'interface facilement entre heure locale et UTC. Vérifie pour les données TMA j'ai l'impression qu'il n'ajoute pas avec le bon fuseau horaire.
-*   **Problème SIV et DST** : La grille `sivRules.js` ne gère pas les transitions d'heure d'été/hiver, ce qui peut affecter la précision des réductions SIV pour les périodes à cheval sur ces changements. (NOTE: Ce problème est maintenant résolu par l'interprétation des règles SIV en heure locale.)
+## Development Setup & Constraints
+*   **Frontend-only**: All logic and data processing occur within the browser. No backend services are required for this feature.
+*   **Modular Design**: Code is organized into separate files (e.g., `script.js`, `CapacityCalculator.js`, `vacationGrids.js`, `sivRules.js`, `tmaData.js`) for better maintainability.
+*   **State Management**: A global `state` object in `script.js` manages the application's current data and configuration.
 
 ## Dependencies
-*   `d3.v7.min.js`: Included via CDN.
-*   `chart.js`: Included via CDN.
-*   `chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js`: Included via CDN for date handling in Chart.js.
-*   `staffingMap.js`: Local JavaScript file, providing staffing data as a global constant.
-*   `sivRules.js`: Local JavaScript file, providing SIV rules data as a global constant.
-*   `vacationGrids.js`: Local JavaScript file, providing vacation grid data as a global constant.
+*   **Chart.js**: For charting capabilities.
+*   **D3.js**: For data visualization, specifically the heatmap.
+*   **`CapacityCalculator.js`**: A custom class encapsulating the logic for calculating control capacity based on staffing, rules, and vacation data.
+*   **`sivRules.js`**: Contains specific rules related to SIV hypotheses.
+*   **`vacationGrids.js`**: Provides data for agent vacation schedules.
+*   **Predict NM Files (.txt)**: A new data source processed differently, displaying specific information such as the number of traffics per day and the import date/time.
