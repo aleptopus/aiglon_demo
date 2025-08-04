@@ -13,22 +13,155 @@ window.AiglonNM = (function() {
     const state = core.getState();
 
     // --- Constants spécifiques Predict NM ---
+    // Aéroports TMA selon les critères spécifiés
+    const TMA_AIRPORTS = ['LFLY', 'LFLS', 'LFLU', 'LFLB', 'LFLP'];
+    
+    // Types de trafic avec filtres globaux
+    const NM_TRAFFIC_TYPES = [
+        { key: "arrivées", label: "Arrivées LFLL", color: 'rgba(158, 206, 106, 0.8)' },
+        { key: "départs", label: "Départs LFLL", color: 'rgba(247, 118, 142, 0.8)' },
+        { key: "tma", label: "TMA", color: 'rgba(122, 162, 247, 0.8)' }
+    ];
+    
+    // Couleurs détaillées pour chaque catégorie (utilisées dans le tableau)
     const PREDICT_NM_COLORS = {
-        'arrivées_LL': 'rgba(0, 128, 0, 0.15)',   // #008000
-        'arrivées_LY': 'rgba(0, 255, 0, 0.15)',   // #00FF00
-        'arrivées_LS': 'rgba(102, 205, 170, 0.15)',// #66CDAA
-        'arrivées_LB+LP': 'rgba(30, 144, 255, 0.15)',// #1E90FF
-        'départs_LL': 'rgba(255, 0, 0, 0.15)',    // #FF0000
-        'départs_LY+LS': 'rgba(255, 105, 180, 0.15)',// #FF69B4
-        'départs_LB+LP': 'rgba(0, 0, 255, 0.15)', // #0000FF
-        'LU': 'rgba(255, 215, 0, 0.15)',  // #FFD700
-        'transits': 'rgba(0, 0, 0, 0.15)'         // #000000
+        'arrivées_LL': 'rgba(0, 128, 0, 0.5)',   // #008000
+        'arrivées_LY': 'rgba(0, 255, 0, 0.5)',   // #00FF00
+        'arrivées_LS': 'rgba(102, 205, 170, 0.5)',// #66CDAA
+        'arrivées_LB+LP': 'rgba(30, 144, 255, 0.5)',// #1E90FF
+        'départs_LL': 'rgba(255, 0, 0, 0.5)',    // #FF0000
+        'départs_LY+LS': 'rgba(255, 105, 180, 0.5)',// #FF69B4
+        'départs_LB+LP': 'rgba(0, 0, 255, 0.5)', // #0000FF
+        'LU': 'rgba(255, 215, 0, 0.5)',  // #FFD700
+        'transits': 'rgba(0, 0, 0, 0.5)'         // #000000
     };
+    
+    // Couleurs pour les graphiques (plus opaques)
+    const PREDICT_NM_CHART_COLORS = {
+        'arrivées_LL': 'rgba(0, 128, 0, 0.8)',
+        'arrivées_LY': 'rgba(0, 255, 0, 0.8)',
+        'arrivées_LS': 'rgba(102, 205, 170, 0.8)',
+        'arrivées_LB+LP': 'rgba(30, 144, 255, 0.8)',
+        'départs_LL': 'rgba(255, 0, 0, 0.8)',
+        'départs_LY+LS': 'rgba(255, 105, 180, 0.8)',
+        'départs_LB+LP': 'rgba(0, 0, 255, 0.8)',
+        'LU': 'rgba(255, 215, 0, 0.8)',
+        'transits': 'rgba(0, 0, 0, 0.8)'
+    };
+
+    // --- Fonction utilitaire pour classifier le type de trafic (détaillé) ---
+    function classifyTrafficType(adep, ades) {
+        const isArrival = ades === 'LFLL' || ades === 'LFLY' || ades === 'LFLS' || ades === 'LFLB' || ades === 'LFLP';
+        const isDeparture = adep === 'LFLL' || adep === 'LFLY' || adep === 'LFLS' || adep === 'LFLB' || adep === 'LFLP';
+
+        if (adep === 'LFLU' || ades === 'LFLU') {
+            return 'LU';
+        } else if (isArrival && !isDeparture) {
+            if (ades === 'LFLL') return 'arrivées_LL';
+            else if (ades === 'LFLY') return 'arrivées_LY';
+            else if (ades === 'LFLS') return 'arrivées_LS';
+            else if (ades === 'LFLB' || ades === 'LFLP') return 'arrivées_LB+LP';
+        } else if (isDeparture && !isArrival) {
+            if (adep === 'LFLL') return 'départs_LL';
+            else if (adep === 'LFLY' || adep === 'LFLS') return 'départs_LY+LS';
+            else if (adep === 'LFLB' || adep === 'LFLP') return 'départs_LB+LP';
+        }
+        return 'transits';
+    }
+    
+    // --- Fonction pour déterminer le groupe de filtre ---
+    function getFilterGroup(category) {
+        if (category === 'arrivées_LL') return 'arrivées';
+        if (category === 'départs_LL') return 'départs';
+        if (['arrivées_LY', 'arrivées_LS', 'arrivées_LB+LP', 'départs_LY+LS', 'départs_LB+LP', 'LU', 'transits'].includes(category)) {
+            return 'tma';
+        }
+        return 'tma'; // Tous les autres vols font partie du groupe TMA (Transits TMA)
+    }
+
+    // --- Fonction pour déterminer si un vol est interne TMA ---
+    function isInternalTMAFlight(adep, ades) {
+        return TMA_AIRPORTS.includes(adep) && TMA_AIRPORTS.includes(ades);
+    }
+
+    // --- Fonction pour créer un événement de vol ---
+    function createFlightEvent(time, arcid, adep, ades, atyp, eventType = 'entry') {
+        // Nettoyer l'heure (supprimer les caractères de fin comme 'C' ou 'E')
+        let cleanTime = time;
+        if (cleanTime && cleanTime.length > 5) {
+            cleanTime = cleanTime.slice(0, 5);
+        }
+
+        // Déterminer la catégorie selon le type d'événement
+        let category;
+        if (eventType === 'entry') {
+            // Pour l'événement d'entrée dans l'espace TMA, forcer la classification comme départ pour les vols internes TMA
+            if (isInternalTMAFlight(adep, ades)) {
+                // Vol interne TMA : événement d'entrée = départ
+                if (adep === 'LFLL') {
+                    category = 'départs_LL';
+                } else if (adep === 'LFLY' || adep === 'LFLS') {
+                    category = 'départs_LY+LS';
+                } else if (adep === 'LFLB' || adep === 'LFLP') {
+                    category = 'départs_LB+LP';
+                } else if (adep === 'LFLU') {
+                    category = 'LU';
+                } else {
+                    category = 'transits';
+                }
+            } else {
+                // Vol normal : utiliser la classification normale
+                category = classifyTrafficType(adep, ades);
+            }
+        } else {
+            // Pour l'événement de sortie (exit), forcer la classification comme arrivée pour les vols internes TMA
+            if (ades === 'LFLL') {
+                category = 'arrivées_LL';
+            } else if (ades === 'LFLY') {
+                category = 'arrivées_LY';
+            } else if (ades === 'LFLS') {
+                category = 'arrivées_LS';
+            } else if (ades === 'LFLB' || ades === 'LFLP') {
+                category = 'arrivées_LB+LP';
+            } else if (ades === 'LFLU') {
+                category = 'LU';
+            } else {
+                category = 'transits';
+            }
+        }
+
+        return {
+            entry: cleanTime,
+            arcid: arcid,
+            adep: adep,
+            ades: ades,
+            atyp: atyp,
+            category: category,
+            color: PREDICT_NM_COLORS[category],
+            eventType: eventType
+        };
+    }
+
+    // --- Fonction pour créer les boutons de filtrage NM ---
+    function setupNMTrafficToggles() {
+        // Créer les boutons de filtrage "Types de trafic" pour la vue NM
+        elements.trafficToggles.innerHTML = NM_TRAFFIC_TYPES.map((type) =>
+            `<input type="checkbox" id="nm-type-${type.key}" value="${type.key}" checked><label for="nm-type-${type.key}">${type.label}</label>`
+        ).join('');
+        
+        // Ajouter les event listeners pour les filtres de trafic
+        document.querySelectorAll('#trafficTypeToggles input').forEach(cb =>
+            cb.addEventListener('change', () => core.updateDashboard())
+        );
+    }
 
     // --- Event Listeners Setup ---
     function setupNMEventListeners() {
         elements.predictNMFile.addEventListener('change', handlePredictNMFiles);
         elements.togglePredictNMTableBtn.addEventListener('click', togglePredictNMTableVisibility);
+        
+        // Initialiser les boutons de filtrage NM
+        setupNMTrafficToggles();
         
         // Ajouter les event listeners pour les filtres par colonne
         setupColumnFilters();
@@ -71,6 +204,8 @@ window.AiglonNM = (function() {
                 filesProcessed++;
                 if (filesProcessed === files.length) {
                     core.setState('predictNMData', predictNMData);
+                    // Restaurer les boutons de filtrage NM après le chargement
+                    setupNMTrafficToggles();
                     initializeApplication('predictNM');
                 }
             };
@@ -100,13 +235,16 @@ window.AiglonNM = (function() {
 
         const colIndices = {
             entry: headers.indexOf("entry"),
+            exit: headers.indexOf("exit"),
             arcid: headers.indexOf("arcid"),
             adep: headers.indexOf("adep"),
             ades: headers.indexOf("ades"),
             atyp: headers.indexOf("atyp")
         };
 
-        if (Object.values(colIndices).some(index => index === -1)) {
+        // Vérifier les colonnes requises (exit est optionnel pour la compatibilité)
+        const requiredColumns = ['entry', 'arcid', 'adep', 'ades', 'atyp'];
+        if (requiredColumns.some(col => colIndices[col] === -1)) {
             console.error("Une ou plusieurs colonnes requises (entry, arcid, adep, ades, atyp) sont manquantes dans le fichier Predict NM.");
             return null;
         }
@@ -119,43 +257,30 @@ window.AiglonNM = (function() {
                 return;
             }
 
-            let entryTime = values[colIndices.entry];
-            if (entryTime && entryTime.length > 5) {
-                entryTime = entryTime.slice(0, 5); // Remove trailing char like 'C' or 'E'
-            }
-
+            const entryTime = values[colIndices.entry];
+            const exitTime = colIndices.exit !== -1 ? values[colIndices.exit] : null;
             const adep = values[colIndices.adep]?.toUpperCase();
             const ades = values[colIndices.ades]?.toUpperCase();
             const arcid = values[colIndices.arcid];
             const atyp = values[colIndices.atyp];
 
-            let category = 'transits'; // Default to transit
-
-            const isArrival = ades === 'LFLL' || ades === 'LFLY' || ades === 'LFLS' || ades === 'LFLB' || ades === 'LFLP';
-            const isDeparture = adep === 'LFLL' || adep === 'LFLY' || adep === 'LFLS' || adep === 'LFLB' || adep === 'LFLP';
-
-            if (adep === 'LFLU' || ades === 'LFLU') {
-                category = 'LU';
-            } else if (isArrival && !isDeparture) {
-                if (ades === 'LFLL') category = 'arrivées_LL';
-                else if (ades === 'LFLY') category = 'arrivées_LY';
-                else if (ades === 'LFLS') category = 'arrivées_LS';
-                else if (ades === 'LFLB' || ades === 'LFLP') category = 'arrivées_LB+LP';
-            } else if (isDeparture && !isArrival) {
-                if (adep === 'LFLL') category = 'départs_LL';
-                else if (adep === 'LFLY' || adep === 'LFLS') category = 'départs_LY+LS';
-                else if (adep === 'LFLB' || adep === 'LFLP') category = 'départs_LB+LP';
+            // Vérifier si c'est un vol interne TMA
+            if (isInternalTMAFlight(adep, ades) && exitTime) {
+                // Créer 2 événements pour les vols internes TMA
+                
+                // 1. Événement de départ à l'heure entry
+                const departureEvent = createFlightEvent(entryTime, arcid, adep, ades, atyp, 'entry');
+                flights.push(departureEvent);
+                
+                // 2. Événement d'arrivée à l'heure exit
+                const arrivalEvent = createFlightEvent(exitTime, arcid, adep, ades, atyp, 'exit');
+                flights.push(arrivalEvent);
+                
+            } else {
+                // Vol normal : créer un seul événement
+                const singleEvent = createFlightEvent(entryTime, arcid, adep, ades, atyp, 'entry');
+                flights.push(singleEvent);
             }
-
-            flights.push({
-                entry: entryTime,
-                arcid: arcid,
-                adep: adep,
-                ades: ades,
-                atyp: atyp,
-                category: category,
-                color: PREDICT_NM_COLORS[category]
-            });
         });
 
         return { metadata, flights };
@@ -351,8 +476,14 @@ window.AiglonNM = (function() {
         const { redrawSlider = true } = options;
         
         let numDays = 1;
+        let activeDays = [];
+        let activeTraffic = [];
 
         if (core.getState('activeDataSource') === 'predictNM' && core.getState('predictNMData').size > 0) {
+            // Récupérer les filtres actifs
+            activeDays = [...elements.dayToggles.querySelectorAll('input:checked')].map(cb => parseInt(cb.value));
+            activeTraffic = [...elements.trafficToggles.querySelectorAll('input:checked')].map(cb => cb.value);
+            
             numDays = Array.from(core.getState('predictNMData').keys()).filter(fdate => {
                 const fdateObj = new Date(fdate + 'T00:00:00Z');
                 return fdateObj >= core.getState('currentStartDate') && fdateObj <= core.getState('currentEndDate');
@@ -375,28 +506,46 @@ window.AiglonNM = (function() {
             return;
         }
 
-        updateMainChart(numDays);
+        updateMainChart(numDays, activeDays, activeTraffic);
         updatePredictNMTable();
         updateSynthesisContent();
     }
     
     // --- Main Chart for Predict NM ---
-    function updateMainChart(numDays) {
+    function updateMainChart(numDays, activeDays, activeTraffic) {
         elements.chartTitle.textContent = `Trafic moyen par créneau horaire (Nombre de jours: ${numDays})`;
 
         let datasets = [];
         let labels = [];
 
-        // --- Predict NM Data Processing ---
+        // --- Predict NM Data Processing avec filtrage ---
         const predictNMData = core.getState('predictNMData');
         const predictNMFlatData = [];
+        
         predictNMData.forEach(dayData => {
             const fdate = dayData.metadata.FDATE;
             const startDate = core.getState('currentStartDate').toISOString().slice(0, 10);
             const endDate = core.getState('currentEndDate').toISOString().slice(0, 10);
 
             if (fdate >= startDate && fdate <= endDate) {
+                // Créer une date pour déterminer le jour de la semaine
+                const flightDate = new Date(fdate + 'T00:00:00Z');
+                const dayOfWeek = (flightDate.getUTCDay() + 6) % 7; // Convertir dimanche=0 vers lundi=0
+                
+                // Filtrer par jour de semaine
+                if (!activeDays.includes(dayOfWeek)) {
+                    return;
+                }
+                
                 dayData.flights.forEach(flight => {
+                    // Déterminer le groupe de filtre pour ce vol
+                    const filterGroup = getFilterGroup(flight.category);
+                    
+                    // Filtrer par type de trafic selon les filtres actifs
+                    if (!activeTraffic.includes(filterGroup)) {
+                        return;
+                    }
+                    
                     const [h, m] = flight.entry.split(':').map(Number);
                     const slotStr = `${String(h).padStart(2, '0')}:${String(Math.floor(m / 15) * 15).padStart(2, '0')}`;
                     predictNMFlatData.push({ timeSlot: slotStr, category: flight.category, value: 1 });
@@ -404,6 +553,7 @@ window.AiglonNM = (function() {
             }
         });
 
+        // Initialiser les données par catégorie détaillée
         const categorySlotData = new Map();
         for (const key in PREDICT_NM_COLORS) {
             categorySlotData.set(key, new Map());
@@ -416,7 +566,10 @@ window.AiglonNM = (function() {
         }
 
         predictNMFlatData.forEach(item => {
-            categorySlotData.get(item.category)?.set(item.timeSlot, categorySlotData.get(item.category).get(item.timeSlot) + item.value);
+            if (categorySlotData.has(item.category)) {
+                const currentValue = categorySlotData.get(item.category).get(item.timeSlot) || 0;
+                categorySlotData.get(item.category).set(item.timeSlot, currentValue + item.value);
+            }
         });
 
         labels = [];
@@ -444,15 +597,23 @@ window.AiglonNM = (function() {
             return rollingSums;
         };
 
+        // Créer les datasets avec les catégories détaillées (inclure les transits TMA)
         for (const key in PREDICT_NM_COLORS) {
             const categoryDataForRolling = Array.from(categorySlotData.get(key)).map(([slot, count]) => ({ timeSlot: slot, value: count }));
             const rollingSums = calculateRollingSum(categoryDataForRolling);
             
+            // Déterminer si cette catégorie doit être visible selon les filtres
+            const filterGroup = getFilterGroup(key);
+            const isVisible = activeTraffic.includes(filterGroup);
+            
+            // Label spécial pour les transits
+            const label = key === 'transits' ? 'TRANSITS TMA' : key.replace('_', ' ').replace('+', ' + ').toUpperCase();
+            
             datasets.push({
-                label: key.replace('_', ' ').replace('+', ' + ').toUpperCase(),
+                label: label,
                 data: labels.map(slot => rollingSums.get(slot) || 0),
-                backgroundColor: PREDICT_NM_COLORS[key].replace('0.15', '0.8'),
-                hidden: false,
+                backgroundColor: PREDICT_NM_CHART_COLORS[key],
+                hidden: !isVisible,
                 type: 'bar',
                 stack: 'predictNM'
             });
@@ -501,7 +662,7 @@ window.AiglonNM = (function() {
                                     const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
                                     return labels.map(label => {
                                         if (label.text) {
-                                            label.text = label.text.replace('ARRIVÉES', 'Arr').replace('DÉPARTS', 'Dep');
+                                            label.text = label.text.replace('Arrivées', 'Arr').replace('Départs', 'Dep');
                                         }
                                         return label;
                                     });
@@ -531,7 +692,7 @@ window.AiglonNM = (function() {
                                  },
                                  label: function(context) {
                                      let labelText = context.dataset.label;
-                                     labelText = labelText.replace('ARRIVÉES', 'Arr').replace('DÉPARTS', 'Dep');
+                                     labelText = labelText.replace('Arrivées', 'Arr').replace('Départs', 'Dep');
                                      const value = context.parsed.y;
                                      const formattedValue = value.toFixed(0);
                                      return ` ${labelText}: ${formattedValue}`;

@@ -38,6 +38,16 @@
 *   **Filtrage Combinable**: Tous les filtres peuvent être utilisés simultanément
 *   **Mise à Jour Temps Réel**: Filtrage instantané lors de la saisie
 
+### Filtres Jours de Semaine et Types de Trafic (Vue NM) - NOUVEAU
+*   **Filtres Jours de Semaine**: Activation/désactivation par jour (Lundi à Dimanche)
+*   **Filtres Types de Trafic**: Trois catégories principales avec logique TMA spécifique
+    *   **Arrivées LFLL**: Arrivées vers LFLL uniquement
+    *   **Départs LFLL**: Départs depuis LFLL uniquement
+    *   **TMA**: Groupe tous les aéroports LFLY, LFLS, LFLU, LFLB, LFLP
+*   **Classification Détaillée**: Conservation du détail par aéroport dans le graphique
+*   **Logique de Filtrage**: Fonction `getFilterGroup()` pour mapper les catégories détaillées aux filtres globaux
+*   **Couleurs Préservées**: Chaque aéroport TMA conserve sa couleur spécifique
+
 ### Gestion de la Salle IFR (NOUVEAU)
 *   **Configuration Centralisée**: Horaires d'ouverture définis dans `DATE_CONFIG.IFR_ROOM_SCHEDULE`
 *   **Support Multi-Périodes**: Horaires différenciés pour périodes Chargée/Creuse/Hiver

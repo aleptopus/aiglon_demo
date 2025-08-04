@@ -20,20 +20,26 @@ window.AiglonCohor = (function() {
         { key: "tma", label: "TMA", color: 'rgba(122, 162, 247, 0.8)' }
     ];
 
+    // --- Fonction pour créer les boutons de filtrage COHOR ---
+    function setupCohorTrafficToggles() {
+        // Create traffic type toggles for COHOR
+        elements.trafficToggles.innerHTML = TRAFFIC_TYPES.map((type) =>
+            `<input type="checkbox" id="cohor-type-${type.key}" value="${type.key}" checked><label for="cohor-type-${type.key}">${type.label}</label>`
+        ).join('');
+        
+        // Add event listeners to traffic toggles
+        document.querySelectorAll('#trafficTypeToggles input').forEach(cb =>
+            cb.addEventListener('change', () => core.updateDashboard())
+        );
+    }
+
     // --- Event Listeners Setup ---
     function setupCohorEventListeners() {
         elements.csvFile.addEventListener('change', handleCohorFile);
         elements.jsonFile.addEventListener('change', handleTmaFile);
         
-        // Create traffic type toggles for COHOR
-        elements.trafficToggles.innerHTML = TRAFFIC_TYPES.map((type) => 
-            `<input type="checkbox" id="type-${type.key}" value="${type.key}" checked><label for="type-${type.key}">${type.label}</label>`
-        ).join('');
-        
-        // Add event listeners to traffic toggles
-        document.querySelectorAll('#trafficTypeToggles input').forEach(cb => 
-            cb.addEventListener('change', () => core.updateDashboard())
-        );
+        // Initialiser les boutons de filtrage COHOR
+        setupCohorTrafficToggles();
     }
 
     // --- File Handling ---
@@ -54,6 +60,9 @@ window.AiglonCohor = (function() {
 
         elements.csvName.textContent = file.name;
         core.setState('activeDataSource', 'cohor');
+
+        // Restaurer les boutons de filtrage COHOR
+        setupCohorTrafficToggles();
 
         const reader = new FileReader();
         reader.onload = (e) => {

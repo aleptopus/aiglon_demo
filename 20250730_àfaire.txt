@@ -1,3 +1,4 @@
 Dans la vue NM:
 - Les vols internes (par exemple LS-LB) sont compté comme des transits purs.
 Il faut dissocier en 2 et avoir un dep LS et une arrivée LB.
+- Bloc filtres interactifs activer les filtres jours de semaine et type trafic

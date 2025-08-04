@@ -52,3 +52,20 @@
   - **Tests validés** : Suite de tests automatisés + test spécifique moyenne glissante avec validation effet progressif
   - **Documentation mise à jour** : Mise à jour complète de la memory-bank avec correction ordre d'application
 - **04/08/2025:** Mise à jour complète de la documentation de la memory-bank pour refléter tous les changements.
+- **04/08/2025:** **ACTIVATION DES FILTRES NM :**
+  - **Filtres Jours de Semaine** : Activation des filtres par jour de semaine en vue NM (Lundi à Dimanche)
+  - **Filtres Types de Trafic** : Implémentation des filtres par type de trafic avec logique TMA spécifique
+  - **Classification TMA Détaillée** : Conservation du détail par aéroport (LFLY, LFLS, LFLU, LFLB, LFLP) dans le graphique
+  - **Logique de Filtrage Hybride** : Filtres globaux (Arrivées LFLL, Départs LFLL, TMA) avec affichage détaillé
+  - **Fonction `getFilterGroup()`** : Nouvelle fonction pour mapper les catégories détaillées aux filtres globaux
+  - **Couleurs Préservées** : Chaque aéroport TMA conserve sa couleur spécifique dans le graphique
+  - **Intégration Complète** : Modification de `updateDashboard()` et `updateMainChart()` pour respecter les filtres actifs
+- **04/08/2025:** **CORRECTION VOLS INTERNES TMA :**
+  - **Bug Identifié** : Les vols internes TMA (ex: LFLS→LFLB) étaient classés comme "transits TMA" au lieu de créer 2 événements
+  - **Solution Implémentée** : Dédoublement automatique des vols internes TMA en 2 événements distincts
+  - **Fonction `isInternalTMAFlight()`** : Détection des vols entre aéroports TMA (LFLY, LFLS, LFLU, LFLB, LFLP)
+  - **Fonction `createFlightEvent()`** : Création d'événements avec classification appropriée selon le type (entry/exit)
+  - **Traitement Colonnes** : Support des colonnes `entry` et `exit` des fichiers NM
+  - **Événement Départ** : À l'heure `entry` avec couleur départ appropriée
+  - **Événement Arrivée** : À l'heure `exit` avec couleur arrivée appropriée
+  - **Exemple** : Vol LFLS→LFLB (09:55→10:11) = Départ LFLS à 09:55 (rose) + Arrivée LFLB à 10:11 (bleu)

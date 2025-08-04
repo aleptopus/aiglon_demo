@@ -50,9 +50,27 @@
     *   **Intégration** dans `calculateDailyCapacity()` et `calculateCapacityWithSpecificGrid()`
     *   **Tests validés** avec suite de tests automatisés couvrant tous les scénarios + test spécifique moyenne glissante
 
+**Nouvelle Fonctionnalité Filtres NM (04/08/2025) :**
+
+*   **Filtres Jours de Semaine Activés :** Les filtres par jour de semaine sont maintenant fonctionnels en vue NM
+*   **Filtres Types de Trafic Activés :** Système de filtrage par type de trafic avec logique TMA spécifique
+*   **Classification TMA Détaillée :**
+    *   **TMA** : Arrivées/départs depuis/vers LFLY, LFLS, LFLU, LFLB, LFLP + Transits TMA (avec détail par aéroport)
+    *   **Arrivées LFLL** : Arrivées vers LFLL uniquement
+    *   **Départs LFLL** : Départs depuis LFLL uniquement
+    *   **Transits TMA** : Tous les autres vols (ni LFLL ni aéroports TMA) inclus dans le groupe TMA
+*   **Filtrage Granulaire :** Le filtre "TMA" active/désactive tous les aéroports TMA tout en conservant le détail visuel
+*   **Couleurs Préservées :** Chaque aéroport TMA conserve sa couleur spécifique dans le graphique
+*   **Logique de Filtrage :** Combinaison des filtres jours de semaine et types de trafic
+*   **Correction Vols Internes TMA :** Traitement des vols internes TMA (ex: LFLS→LFLB) en 2 événements distincts
+    *   **Événement Départ** : À l'heure `entry` avec classification départ
+    *   **Événement Arrivée** : À l'heure `exit` avec classification arrivée
+    *   **Support Colonnes** : Traitement des colonnes `entry` et `exit` des fichiers NM
+
 **État Actuel :**
 *   **Projet Complet :** Toutes les fonctionnalités demandées sont implémentées et opérationnelles
 *   **Interface Optimisée :** Chaque vue (COHOR/NM) a une interface adaptée à ses besoins spécifiques
 *   **Filtrage Avancé :** Système de filtrage granulaire pour une meilleure analyse des données NM
+*   **Filtres NM Fonctionnels :** Les filtres "Jours de semaine" et "Types de trafic" sont maintenant actifs en vue NM
 *   **Calculs Précis :** Tous les bugs de calcul TMA ont été corrigés
 *   **Gestion IFR :** Nouvelle fonctionnalité de limitation de capacité selon l'état de la salle IFR
