@@ -1,30 +1,21 @@
 /**
- * Fichier de données COHOR
- * Structure attendue : Tableau d'objets avec les propriétés suivantes
- * Format : [
- *   { date: Date, datetime: Date, timeSlot: string, isArrival: number, isDeparture: number },
- *   ...
- * ]
+ * 📊 DONNÉES COHOR SAISON HIVER 2025
+ * 
+ * Ce fichier contient les données de trafic COHOR pour la saison hiver.
+ * Utilisé par le bouton "Aiglon futé saison hiver 2025"
  */
 
-const cohorData = [
-  // COLLER VOS DONNEES COHOR ICI - Exemple de format :
-  {
-    date: new Date('2023-01-15'),
-    datetime: new Date('2023-01-15T08:15:00Z'),
-    timeSlot: "08:15",
-    isArrival: 0,
-    isDeparture: 1
-  },
-  {
-    date: new Date('2023-01-15'),
-    datetime: new Date('2023-01-15T09:30:00Z'),
-    timeSlot: "09:30",
-    isArrival: 1,
-    isDeparture: 0
-  },
-  // ... autres vols
-];
+// Variable globale accessible depuis dataLoader.js
+window.winterCohorDataCSV = `N/D;Airport;Flight Number;A/D;Time;From;To;Ops Days;Org/Nxt;Prv/Fin;Seats;A/C;STC;Frequency;Wait;;;;Season;Rotation ID;Code;Registration;Last Update;
+N;LYS;AC  876;A;0835;20250101;20250131;1000060;YUL;YUL;297;333;J;1;;;;;W25;0;;;15DEC24 1944;
+N;LYS;AC  876;A;0835;20250201;20250228;0200000;YUL;YUL;297;333;J;1;;;;;W25;1;;;15DEC24 1401;
+N;LYS;AC  877;D;1200;20250101;20250131;1004060;YUL;YUL;297;333;J;1;;;;;W25;2;;;15DEC24 0827;
+N;LYS;AC  877;D;1200;20250201;20250228;0200000;YUL;YUL;297;333;J;1;;;;;W25;3;;;15DEC24 1953;
+N;LYS;AF 7300;A;0630;20250101;20250329;1234567;CDG;CDG;180;320;J;1;;;;;W25;4;;;15DEC24 1944;
+N;LYS;AF 7301;D;0730;20250101;20250329;1234567;CDG;CDG;180;320;J;1;;;;;W25;5;;;15DEC24 1401;
+N;LYS;LH 2230;A;0815;20250101;20250329;1234567;MUC;MUC;150;319;J;1;;;;;W25;6;;;15DEC24 0827;
+N;LYS;LH 2231;D;0915;20250101;20250329;1234567;MUC;MUC;150;319;J;1;;;;;W25;7;;;15DEC24 1953;`;
 
-// Export pour utilisation dans d'autres fichiers
-export default cohorData;
+// ⬇️ COLLER VOS DONNÉES HIVER ICI ⬇️
+
+console.log('✅ Données COHOR hiver chargées');

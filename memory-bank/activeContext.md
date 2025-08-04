@@ -66,11 +66,30 @@
     *   **Événement Départ** : À l'heure `entry` avec classification départ
     *   **Événement Arrivée** : À l'heure `exit` avec classification arrivée
     *   **Support Colonnes** : Traitement des colonnes `entry` et `exit` des fichiers NM
-
-**État Actuel :**
-*   **Projet Complet :** Toutes les fonctionnalités demandées sont implémentées et opérationnelles
-*   **Interface Optimisée :** Chaque vue (COHOR/NM) a une interface adaptée à ses besoins spécifiques
-*   **Filtrage Avancé :** Système de filtrage granulaire pour une meilleure analyse des données NM
-*   **Filtres NM Fonctionnels :** Les filtres "Jours de semaine" et "Types de trafic" sont maintenant actifs en vue NM
-*   **Calculs Précis :** Tous les bugs de calcul TMA ont été corrigés
-*   **Gestion IFR :** Nouvelle fonctionnalité de limitation de capacité selon l'état de la salle IFR
+    
+    **Système de Chargement Automatique (04/08/2025) :**
+    
+    *   **Remplacement des Inputs Manuels :** Les champs de sélection de fichiers ont été remplacés par 3 boutons automatiques
+    *   **Interface Modernisée :** Section "Source des Données" avec boutons intuitifs
+    *   **Sources Pré-intégrées :**
+        *   **Bouton "Aiglon futé saison été 2025"** : Charge automatiquement données COHOR été + TMA
+        *   **Bouton "Aiglon futé saison hiver 2025"** : Charge automatiquement données COHOR hiver + TMA
+        *   **Bouton "NM Predict"** : Charge automatiquement données J+0 à J+4 avec filtres actifs
+    *   **Fichiers de Données JavaScript :**
+        *   `summer_cohorData.js`, `winter_cohorData.js`, `tmaData.js`
+        *   `nmpredictj0Data.js` à `nmpredictj4Data.js`
+    *   **Variables Globales :** Exposition via `window.*` pour éviter les erreurs CORS
+    *   **Documentation Intégrée :** Zones de copier-coller clairement documentées dans chaque fichier
+    *   **Correction Parsing JSON :** Résolution de l'erreur "JSON.parse: unexpected character" pour les données NM Predict
+    *   **Traitement Direct :** Élimination de FileReader, traitement direct des chaînes de données
+    *   **API Publiques :** Exposition des fonctions via `window.AiglonCohor` et `window.AiglonNM`
+    
+    **État Actuel :**
+    *   **Projet Complet :** Toutes les fonctionnalités demandées sont implémentées et opérationnelles
+    *   **Interface Optimisée :** Chaque vue (COHOR/NM) a une interface adaptée à ses besoins spécifiques
+    *   **Filtrage Avancé :** Système de filtrage granulaire pour une meilleure analyse des données NM
+    *   **Filtres NM Fonctionnels :** Les filtres "Jours de semaine" et "Types de trafic" sont maintenant actifs en vue NM
+    *   **Calculs Précis :** Tous les bugs de calcul TMA ont été corrigés
+    *   **Gestion IFR :** Nouvelle fonctionnalité de limitation de capacité selon l'état de la salle IFR
+    *   **Chargement Automatique :** Système de boutons automatiques entièrement fonctionnel
+    *   **Expérience Utilisateur Améliorée :** Plus besoin de sélectionner manuellement les fichiers

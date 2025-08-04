@@ -22,28 +22,25 @@
 
             <main>
                 <div class="card">
-                    <h2 class="card-title">Fichiers de Données</h2>
+                    <h2 class="card-title">Source des Données</h2>
                     <div class="controls-row">
-                        <div class="upload-section">
-                            <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
-                            <button onclick="document.getElementById('csvFileInput').click()" class="button">
-                                Charger Fichier COHOR (.csv)
+                        <div class="data-source-section">
+                            <button id="loadSummerDataBtn" class="button data-source-btn">
+                                Aiglon futé saison été 2025
                             </button>
-                            <p id="csvFileName" class="file-name-display">Aucun fichier</p>
+                            <p id="summerDataStatus" class="data-status-display">Prêt à charger</p>
                         </div>
-                        <div class="upload-section">
-                            <input type="file" id="jsonFileInput" accept=".json" style="display: none;">
-                            <button onclick="document.getElementById('jsonFileInput').click()" class="button">
-                                Charger Fichier TMA (.json)
+                        <div class="data-source-section">
+                            <button id="loadWinterDataBtn" class="button data-source-btn">
+                                Aiglon futé saison hiver 2025
                             </button>
-                            <p id="jsonFileName" class="file-name-display">Aucun fichier</p>
+                            <p id="winterDataStatus" class="data-status-display">Prêt à charger</p>
                         </div>
-                        <div class="upload-section">
-                            <input type="file" id="predictNMFileInput" accept=".txt" multiple style="display: none;">
-                            <button onclick="document.getElementById('predictNMFileInput').click()" class="button">
-                                Charger Fichier Predict NM (.txt)
+                        <div class="data-source-section">
+                            <button id="loadNMPredictDataBtn" class="button data-source-btn">
+                                NM Predict
                             </button>
-                            <p id="predictNMFileName" class="file-name-display">Aucun fichier</p>
+                            <p id="nmPredictDataStatus" class="data-status-display">Prêt à charger</p>
                         </div>
                     </div>
                 </div>
@@ -216,9 +213,21 @@
     <script src="sivRules.js"></script>
     <script src="vacationGrids.js"></script>
     <script src="CapacityCalculator.js"></script>
+    
+    <!-- Fichiers de données intégrées -->
+    <script src="summer_cohorData.js"></script>
+    <script src="winter_cohorData.js"></script>
+    <script src="tmaData.js"></script>
+    <script src="nmpredictj0Data.js"></script>
+    <script src="nmpredictj1Data.js"></script>
+    <script src="nmpredictj2Data.js"></script>
+    <script src="nmpredictj3Data.js"></script>
+    <script src="nmpredictj4Data.js"></script>
+    
     <script src="scriptCore.js"></script>
     <script src="scriptCohor.js"></script>
     <script src="scriptNM.js"></script>
+    <script src="dataLoader.js"></script>
     <!-- Le fichier script.js original n'est plus nécessaire -->
 </body>
 </html>

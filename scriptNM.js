@@ -157,7 +157,10 @@ window.AiglonNM = (function() {
 
     // --- Event Listeners Setup ---
     function setupNMEventListeners() {
-        elements.predictNMFile.addEventListener('change', handlePredictNMFiles);
+        // L'event listener pour predictNMFile est désactivé car le chargement
+        // se fait maintenant via les boutons automatiques dans dataLoader.js
+        // elements.predictNMFile.addEventListener('change', handlePredictNMFiles);
+        
         elements.togglePredictNMTableBtn.addEventListener('click', togglePredictNMTableVisibility);
         
         // Initialiser les boutons de filtrage NM
@@ -186,10 +189,10 @@ window.AiglonNM = (function() {
         // Clear COHOR data and UI
         core.setState('cohorData', []);
         core.setState('tmaMap', new Map());
-        elements.csvName.textContent = 'Aucun fichier';
-        elements.jsonName.textContent = 'Aucun fichier';
+        if (elements.csvName) elements.csvName.textContent = 'Aucun fichier';
+        if (elements.jsonName) elements.jsonName.textContent = 'Aucun fichier';
 
-        elements.predictNMName.textContent = `${files.length} fichier(s) chargé(s)`;
+        if (elements.predictNMName) elements.predictNMName.textContent = `${files.length} fichier(s) chargé(s)`;
         core.setState('activeDataSource', 'predictNM');
 
         let filesProcessed = 0;
@@ -852,7 +855,14 @@ window.AiglonNM = (function() {
                     updateDashboard(options);
                 }
             });
-        }
+        },
+        // Exposer les fonctions pour dataLoader.js
+        processPredictNMFile: function(file) {
+            return handlePredictNMFiles({ target: { files: [file] } });
+        },
+        setupNMTrafficToggles: setupNMTrafficToggles,
+        initializeApplication: initializeApplication,
+        createFlightEvent: createFlightEvent
     };
 })();
 

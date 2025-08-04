@@ -35,8 +35,10 @@ window.AiglonCohor = (function() {
 
     // --- Event Listeners Setup ---
     function setupCohorEventListeners() {
-        elements.csvFile.addEventListener('change', handleCohorFile);
-        elements.jsonFile.addEventListener('change', handleTmaFile);
+        // Les event listeners pour csvFile et jsonFile sont désactivés car le chargement
+        // se fait maintenant via les boutons automatiques dans dataLoader.js
+        // elements.csvFile.addEventListener('change', handleCohorFile);
+        // elements.jsonFile.addEventListener('change', handleTmaFile);
         
         // Initialiser les boutons de filtrage COHOR
         setupCohorTrafficToggles();
@@ -50,15 +52,15 @@ window.AiglonCohor = (function() {
 
         // Clear Predict NM data and UI
         core.setState('predictNMData', new Map());
-        elements.predictNMName.textContent = 'Aucun fichier';
+        if (elements.predictNMName) elements.predictNMName.textContent = 'Aucun fichier';
         elements.predictNMSummaryCard.classList.add('hidden');
         elements.predictNMTableCard.classList.add('hidden');
 
         // Clear TMA data and UI when new COHOR is loaded
         core.setState('tmaMap', new Map());
-        elements.jsonName.textContent = 'Aucun fichier';
+        if (elements.jsonName) elements.jsonName.textContent = 'Aucun fichier';
 
-        elements.csvName.textContent = file.name;
+        if (elements.csvName) elements.csvName.textContent = file.name;
         core.setState('activeDataSource', 'cohor');
 
         // Restaurer les boutons de filtrage COHOR
@@ -87,7 +89,7 @@ window.AiglonCohor = (function() {
             return;
         }
 
-        elements.jsonName.textContent = file.name;
+        if (elements.jsonName) elements.jsonName.textContent = file.name;
         const reader = new FileReader();
         reader.onload = (e) => {
             const tmaMap = processTmaJSON(e.target.result);
@@ -600,6 +602,13 @@ window.AiglonCohor = (function() {
                     updateDashboard(options);
                 }
             });
+        },
+        // Exposer les fonctions pour dataLoader.js
+        processCsvFile: function(file) {
+            return handleCohorFile({ target: { files: [file] } });
+        },
+        processTmaFile: function(file) {
+            return handleTmaFile({ target: { files: [file] } });
         }
     };
 })();

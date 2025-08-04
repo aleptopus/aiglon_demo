@@ -24,6 +24,7 @@
 *   **`sivRules.js`**: Contains specific rules related to SIV hypotheses.
 *   **`vacationGrids.js`**: Provides data for agent vacation schedules.
 *   **Predict NM Files (.txt)**: A new data source processed differently, displaying specific information such as the number of traffics per day and the import date/time.
+*   **`dataLoader.js`**: Module de chargement automatique des données remplaçant les inputs de fichiers manuels par des boutons automatiques.
 
 ## Nouvelles Fonctionnalités (04/08/2025)
 
@@ -68,3 +69,17 @@
 *   **Performance Optimisée**: Filtrage côté client sans impact sur les performances
 *   **Méthode `isIFRRoomOpen()`**: Nouvelle méthode pour déterminer l'état de la salle IFR
 *   **Tests Automatisés**: Suite de tests pour valider l'implémentation IFR
+
+### Système de Chargement Automatique des Données (NOUVEAU)
+*   **Remplacement des Inputs Manuels**: Les champs de sélection de fichiers ont été remplacés par 3 boutons automatiques
+*   **Sources de Données Pré-intégrées**:
+    *   **Aiglon futé saison été 2025**: Données COHOR été + TMA automatiques
+    *   **Aiglon futé saison hiver 2025**: Données COHOR hiver + TMA automatiques
+    *   **NM Predict**: Données J+0 à J+4 avec filtres actifs
+*   **Fichiers de Données JavaScript**:
+    *   `summer_cohorData.js`, `winter_cohorData.js`, `tmaData.js`
+    *   `nmpredictj0Data.js` à `nmpredictj4Data.js`
+*   **Variables Globales**: Exposition via `window.*` pour éviter les erreurs CORS
+*   **Zones de Copier-Coller**: Documentation claire pour mise à jour des données
+*   **Traitement Direct**: Élimination de FileReader pour traitement direct des chaînes de données
+*   **API Publiques**: Exposition des fonctions de traitement via les modules AiglonCohor et AiglonNM
