@@ -5,10 +5,33 @@ const DATE_CONFIG = {
   },
   PERIODS: {
     Hiv: [["01-01", "05-04"], ["12-13", "12-31"]],
-    Cha: [["05-05", "10-13"]], 
+    Cha: [["05-05", "10-13"]],
     Cre: [["10-14", "12-12"]]
-  }
+  },
+  IFR_ROOM_SCHEDULE: {
+    Cha: { // Période chargée
+      Sem: { summer: "05:00-19:00", winter: "06:00-20:00" },
+      Sam: { summer: "05:30-16:30", winter: "06:30-17:30" },
+      Dim: { summer: "06:30-19:00", winter: "07:30-20:00" }
+    },
+    Cre: { // Période creuse
+      Sem: { summer: "05:00-19:00", winter: "06:00-20:00" },
+      Sam: { summer: "05:30-16:00", winter: "06:30-17:00" },
+      Dim: { summer: "07:00-19:00", winter: "08:00-20:00" }
+    },
+    Hiv: { // Période hiver
+      Sem: { summer: "05:00-19:00", winter: "06:00-20:00" },
+      Sam: { summer: "05:30-17:00", winter: "06:30-18:00" },
+      Dim: { summer: "06:30-19:00", winter: "07:30-20:00" }
+    }
+  },
+  IFR_CAPACITY_LIMIT: 18 // Capacité maximale quand salle IFR fermée
 };
+
+// Rendre DATE_CONFIG accessible globalement pour les tests
+if (typeof window !== 'undefined') {
+  window.DATE_CONFIG = DATE_CONFIG;
+}
 
 class CapacityCalculator {
   constructor(staffingMap, sivRules, vacationGrids) {
@@ -123,6 +146,54 @@ class CapacityCalculator {
       return 2; // Heure d'été (UTC+2)
     }
     return 1; // Heure d'hiver (UTC+1)
+  }
+
+  isIFRRoomOpen(timestamp, periodCode, dayType) {
+    // Vérifier si la configuration IFR existe pour cette période et ce type de jour
+    const ifrSchedule = DATE_CONFIG.IFR_ROOM_SCHEDULE[periodCode]?.[dayType];
+    if (!ifrSchedule) {
+      console.warn(`Pas de configuration IFR trouvée pour ${periodCode}/${dayType}. Salle considérée comme ouverte par défaut.`);
+      return true; // Par défaut, considérer la salle comme ouverte
+    }
+
+    // Déterminer si on est en heure d'été ou d'hiver
+    const dstOffset = this.getDSTOffset(timestamp);
+    const season = dstOffset === 2 ? 'summer' : 'winter';
+    const timeRange = ifrSchedule[season];
+
+    if (!timeRange) {
+      console.warn(`Pas de plage horaire IFR trouvée pour ${periodCode}/${dayType}/${season}. Salle considérée comme ouverte par défaut.`);
+      return true;
+    }
+
+    // Parser la plage horaire (format "HH:MM-HH:MM")
+    const [startTime, endTime] = timeRange.split('-');
+    if (!startTime || !endTime) {
+      console.error(`Format de plage horaire IFR invalide: ${timeRange}`);
+      return true;
+    }
+
+    // Convertir l'heure UTC en heures et minutes
+    const utcHours = timestamp.getUTCHours();
+    const utcMinutes = timestamp.getUTCMinutes();
+    const currentTimeMinutes = utcHours * 60 + utcMinutes;
+
+    // Parser les heures de début et fin
+    const [startHours, startMinutes] = startTime.split(':').map(Number);
+    const [endHours, endMinutes] = endTime.split(':').map(Number);
+    const startTimeMinutes = startHours * 60 + startMinutes;
+    const endTimeMinutes = endHours * 60 + endMinutes;
+
+    // Vérifier si l'heure actuelle est dans la plage d'ouverture
+    const isOpen = currentTimeMinutes >= startTimeMinutes && currentTimeMinutes < endTimeMinutes;
+
+    // Log de débogage
+    console.log(`[IFR DEBUG] ${timestamp.toISOString()} UTC (${utcHours}:${utcMinutes.toString().padStart(2,'0')})`);
+    console.log(`           - Période: ${periodCode}, Jour: ${dayType}, Saison: ${season}`);
+    console.log(`           - Plage IFR: ${timeRange} UTC`);
+    console.log(`           - Salle IFR: ${isOpen ? 'OUVERTE' : 'FERMÉE'}`);
+
+    return isOpen;
   }
 
   getAgentsByType(gridData) {
@@ -413,7 +484,19 @@ class CapacityCalculator {
     // Appliquer le mapping capacité sur chaque créneau de 15 min
     const capacities15Min = effectiveAgents15Min.map(agents => this.staffingLookup(agents));
 
-    // Appliquer la moyenne glissante sur la capacité (fenêtre de 1h)
+    // Appliquer la limitation IFR AVANT la moyenne glissante pour chaque créneau de 15 min
+    for (let i = 0; i < capacities15Min.length; i++) {
+      const currentTimestamp = new Date(date);
+      const utcTimestamp = new Date(Date.UTC(currentTimestamp.getFullYear(), currentTimestamp.getMonth(), currentTimestamp.getDate(), 0, 0, 0));
+      utcTimestamp.setUTCMinutes(i * 15);
+
+      // Vérifier si la salle IFR est fermée et appliquer la limitation
+      if (!this.isIFRRoomOpen(utcTimestamp, periodCode, dayType)) {
+        capacities15Min[i] = Math.min(capacities15Min[i], DATE_CONFIG.IFR_CAPACITY_LIMIT);
+      }
+    }
+
+    // Appliquer la moyenne glissante sur la capacité (fenêtre de 1h) APRÈS limitation IFR
     const averagedCapacities = this.applyHourlyAverage(capacities15Min);
 
     return {
@@ -477,11 +560,26 @@ class CapacityCalculator {
     // Appliquer le mapping capacité sur chaque créneau de 15 min
     const capacities15Min = effectiveAgents15Min.map(agents => this.staffingLookup(agents));
 
-    // Appliquer la moyenne glissante sur la capacité (fenêtre de 1h)
+    // Appliquer la limitation IFR AVANT la moyenne glissante pour chaque créneau de 15 min
+    for (let i = 0; i < capacities15Min.length; i++) {
+      const currentUtcTimestamp = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0));
+      currentUtcTimestamp.setUTCMinutes(i * 15);
+
+      // Déterminer la période et le type de jour pour ce créneau
+      const { periodCode: currentPeriodCode, dayType: currentDayType } = this.getPeriodAndDayType(currentUtcTimestamp);
+
+      // Vérifier si la salle IFR est fermée et appliquer la limitation
+      if (!this.isIFRRoomOpen(currentUtcTimestamp, currentPeriodCode, currentDayType)) {
+        capacities15Min[i] = Math.min(capacities15Min[i], DATE_CONFIG.IFR_CAPACITY_LIMIT);
+      }
+    }
+
+    // Appliquer la moyenne glissante sur la capacité (fenêtre de 1h) APRÈS limitation IFR
     const averagedCapacities = this.applyHourlyAverage(capacities15Min);
 
-    // Appliquer la règle de capacité forcée à 6 entre 23h00 et 01h00 UTC
+    // Appliquer les règles spéciales pour chaque créneau APRÈS la moyenne glissante
     for (let i = 0; i < averagedCapacities.length; i++) {
+      // Appliquer la règle de capacité forcée à 6 entre 23h00 et 01h00 UTC
       const utcHour = Math.floor(i / 4); // Convert index to UTC hour
       if (utcHour === 23 || utcHour === 0) { // 23h00-23h45 et 00h00-00h45 UTC
         averagedCapacities[i] = 6; // Forcer la capacité à 6

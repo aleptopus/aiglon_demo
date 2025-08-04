@@ -43,4 +43,12 @@
   - **Interface différenciée** : Vue NM épurée sans blocs statistiques non pertinents
   - **Filtres avancés NM** : Remplacement du filtre général par des filtres par colonne avec support des plages horaires
   - **Formats de plage horaire** : Support des formats "12h00-13h00", "12h-13h", et "12:00-13:00"
+- **04/08/2025:** **IMPLÉMENTATION GESTION SALLE IFR :**
+  - **Configuration IFR** : Ajout de `IFR_ROOM_SCHEDULE` dans `DATE_CONFIG` avec horaires par période/jour/saison
+  - **Méthode `isIFRRoomOpen()`** : Nouvelle méthode pour déterminer l'état de la salle IFR
+  - **Limitation de capacité** : Plafonnement automatique à 18 quand la salle IFR est fermée
+  - **CORRECTION CRUCIALE** : Application limitation IFR AVANT moyenne glissante pour effet progressif correct
+  - **Intégration complète** : Modification des méthodes `calculateDailyCapacity()` et `calculateCapacityWithSpecificGrid()`
+  - **Tests validés** : Suite de tests automatisés + test spécifique moyenne glissante avec validation effet progressif
+  - **Documentation mise à jour** : Mise à jour complète de la memory-bank avec correction ordre d'application
 - **04/08/2025:** Mise à jour complète de la documentation de la memory-bank pour refléter tous les changements.

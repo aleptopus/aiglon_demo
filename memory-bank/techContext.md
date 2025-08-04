@@ -38,11 +38,23 @@
 *   **Filtrage Combinable**: Tous les filtres peuvent être utilisés simultanément
 *   **Mise à Jour Temps Réel**: Filtrage instantané lors de la saisie
 
+### Gestion de la Salle IFR (NOUVEAU)
+*   **Configuration Centralisée**: Horaires d'ouverture définis dans `DATE_CONFIG.IFR_ROOM_SCHEDULE`
+*   **Support Multi-Périodes**: Horaires différenciés pour périodes Chargée/Creuse/Hiver
+*   **Gestion Été/Hiver**: Adaptation automatique selon les changements d'heure (DST)
+*   **Limitation de Capacité**: Plafonnement à 18 quand la salle IFR est fermée
+*   **Ordre d'Application Correct**: Limitation IFR appliquée AVANT moyenne glissante pour effet progressif
+*   **Moyenne Glissante IFR**: Transition progressive lors fermeture/ouverture salle IFR
+*   **Logs de Débogage**: Traçabilité complète des décisions IFR
+
 ### Corrections de Calculs
 *   **Calcul TMA Corrigé**: Résolution de la surestimation d'un facteur 3-4 dans les blocs statistiques COHOR
 *   **Logique Optimisée**: Utilisation directe des valeurs `d.tma` déjà divisées par 4
+*   **Intégration IFR**: Application de la limitation IFR dans les méthodes de calcul de capacité
 
 ### Améliorations Techniques
 *   **Event Listeners Dynamiques**: Configuration automatique des filtres lors de l'initialisation
 *   **Validation de Format**: Gestion robuste des différents formats de plage horaire
 *   **Performance Optimisée**: Filtrage côté client sans impact sur les performances
+*   **Méthode `isIFRRoomOpen()`**: Nouvelle méthode pour déterminer l'état de la salle IFR
+*   **Tests Automatisés**: Suite de tests pour valider l'implémentation IFR

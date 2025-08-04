@@ -39,8 +39,20 @@
 *   **`index.html` :** Ajout d'une ligne de filtres dans l'en-tête du tableau NM
 *   **`style.css` :** Nouveaux styles pour les filtres par colonne (`.column-filter`, `.filter-row`)
 
+**Nouvelle Fonctionnalité IFR (04/08/2025) :**
+
+*   **Gestion de la Salle IFR :** Implémentation complète de la gestion de l'ouverture/fermeture de la salle IFR
+    *   **Configuration centralisée** dans `DATE_CONFIG.IFR_ROOM_SCHEDULE` avec horaires par période et type de jour
+    *   **Adaptation automatique** été/hiver selon les changements d'heure (DST)
+    *   **Limitation de capacité** à 18 quand la salle IFR est fermée
+    *   **Méthode `isIFRRoomOpen()`** pour déterminer l'état de la salle selon timestamp, période et type de jour
+    *   **CORRECTION CRUCIALE** : Application de la limitation IFR **AVANT** la moyenne glissante pour effet progressif correct
+    *   **Intégration** dans `calculateDailyCapacity()` et `calculateCapacityWithSpecificGrid()`
+    *   **Tests validés** avec suite de tests automatisés couvrant tous les scénarios + test spécifique moyenne glissante
+
 **État Actuel :**
 *   **Projet Complet :** Toutes les fonctionnalités demandées sont implémentées et opérationnelles
 *   **Interface Optimisée :** Chaque vue (COHOR/NM) a une interface adaptée à ses besoins spécifiques
 *   **Filtrage Avancé :** Système de filtrage granulaire pour une meilleure analyse des données NM
 *   **Calculs Précis :** Tous les bugs de calcul TMA ont été corrigés
+*   **Gestion IFR :** Nouvelle fonctionnalité de limitation de capacité selon l'état de la salle IFR
