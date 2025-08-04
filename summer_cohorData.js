@@ -28,4 +28,3 @@ const cohorData = [
 
 // Export pour utilisation dans d'autres fichiers
 export default cohorData;
-

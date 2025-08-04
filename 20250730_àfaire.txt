@@ -1,0 +1,3 @@
+Dans la vue NM:
+- Les vols internes (par exemple LS-LB) sont compté comme des transits purs.
+Il faut dissocier en 2 et avoir un dep LS et une arrivée LB.
