@@ -1,8 +1,22 @@
+// Fonction pour calculer automatiquement les transitions DST selon la règle européenne
+function calculateDSTTransitions(year) {
+  // Dernier dimanche de mars (passage à l'heure d'été)
+  const lastDayMarch = new Date(Date.UTC(year, 2, 31)); // 31 mars
+  const lastSundayMarch = new Date(Date.UTC(year, 2, 31 - lastDayMarch.getUTCDay()));
+  
+  // Dernier dimanche d'octobre (passage à l'heure d'hiver)
+  const lastDayOctober = new Date(Date.UTC(year, 9, 31)); // 31 octobre
+  const lastSundayOctober = new Date(Date.UTC(year, 9, 31 - lastDayOctober.getUTCDay()));
+  
+  return {
+    TO_SUMMER: lastSundayMarch.toISOString().split('T')[0], // Format YYYY-MM-DD
+    TO_WINTER: lastSundayOctober.toISOString().split('T')[0]
+  };
+}
+
+// Périodes à LFLL
 const DATE_CONFIG = {
-  DST_TRANSITIONS: {
-    TO_SUMMER: '2025-03-30', // Dernier dimanche de mars
-    TO_WINTER: '2025-10-26'  // Dernier dimanche d'octobre
-  },
+  DST_TRANSITIONS: calculateDSTTransitions(new Date().getFullYear()),
   PERIODS: {
     Hiv: [["01-01", "05-04"], ["12-13", "12-31"]],
     Cha: [["05-05", "10-13"]],
