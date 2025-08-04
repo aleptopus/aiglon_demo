@@ -187,11 +187,11 @@ class CapacityCalculator {
     // Vérifier si l'heure actuelle est dans la plage d'ouverture
     const isOpen = currentTimeMinutes >= startTimeMinutes && currentTimeMinutes < endTimeMinutes;
 
-    // Log de débogage
-    console.log(`[IFR DEBUG] ${timestamp.toISOString()} UTC (${utcHours}:${utcMinutes.toString().padStart(2,'0')})`);
-    console.log(`           - Période: ${periodCode}, Jour: ${dayType}, Saison: ${season}`);
-    console.log(`           - Plage IFR: ${timeRange} UTC`);
-    console.log(`           - Salle IFR: ${isOpen ? 'OUVERTE' : 'FERMÉE'}`);
+    // Log de débogage (désactivé)
+    // console.log(`[IFR DEBUG] ${timestamp.toISOString()} UTC (${utcHours}:${utcMinutes.toString().padStart(2,'0')})`);
+    // console.log(`           - Période: ${periodCode}, Jour: ${dayType}, Saison: ${season}`);
+    // console.log(`           - Plage IFR: ${timeRange} UTC`);
+    // console.log(`           - Salle IFR: ${isOpen ? 'OUVERTE' : 'FERMÉE'}`);
 
     return isOpen;
   }
@@ -256,7 +256,7 @@ class CapacityCalculator {
         }
       });
       
-      console.log(`✓ Sélection personnalisée: ${Object.keys(agentProfiles).length} agents mappés.`);
+      // console.log(`✓ Sélection personnalisée: ${Object.keys(agentProfiles).length} agents mappés.`);
       return agentProfiles;
     }
     
@@ -297,7 +297,7 @@ class CapacityCalculator {
       agentProfiles[index++] = profile;
     });
     
-    console.log(`✓ Sélection automatique: ${Object.keys(agentProfiles).length} agents mappés (3 Je + 7 M + 7 J + 8 SN).`);
+    // console.log(`✓ Sélection automatique: ${Object.keys(agentProfiles).length} agents mappés (3 Je + 7 M + 7 J + 8 SN).`);
     return agentProfiles;
   }
 
@@ -335,9 +335,9 @@ class CapacityCalculator {
 
     const rule = this.sivRules[dayType]?.[sivPeriod]?.[sivHypothesis]?.[hourMinute];
     
-    // Enhanced Debugging for SIV rule lookup
-    console.log(`[SIV DEBUG] Lookup for timestamp: ${timestamp.toISOString()} (UTC) -> ${hourMinute} (Local Paris)`);
-    console.log(`           - Key Parts: dayType='${dayType}', sivPeriod='${sivPeriod}', sivHypothesis='${sivHypothesis}', hourMinute='${hourMinute}'`);
+    // Enhanced Debugging for SIV rule lookup (désactivé)
+    // console.log(`[SIV DEBUG] Lookup for timestamp: ${timestamp.toISOString()} (UTC) -> ${hourMinute} (Local Paris)`);
+    // console.log(`           - Key Parts: dayType='${dayType}', sivPeriod='${sivPeriod}', sivHypothesis='${sivHypothesis}', hourMinute='${hourMinute}'`);
     if (rule !== undefined) {
       console.log(`           - SUCCESS: Found rule. Reduction = ${rule}`);
     } else {
@@ -396,9 +396,9 @@ class CapacityCalculator {
       // Log détaillé pour le créneau 15h45 UTC (index 63: 15*4 + 3 = 63)
       if (i === 63) {
         console.log(`=== ANALYSE CRÉNEAU 15h45 UTC (index ${i}) ===`);
-        console.log(`Indices utilisés pour la moyenne: ${usedIndices.join(', ')}`);
-        console.log(`Valeurs d'agents: ${usedIndices.map(idx => agentsSeries[idx]).join(', ')}`);
-        console.log(`Somme: ${sum}, Count: ${count}, Moyenne: ${averagedSeries[i]}`);
+        // console.log(`Indices utilisés pour la moyenne: ${usedIndices.join(', ')}`);
+        // console.log(`Valeurs d'agents: ${usedIndices.map(idx => agentsSeries[idx]).join(', ')}`);
+        // console.log(`Somme: ${sum}, Count: ${count}, Moyenne: ${averagedSeries[i]}`);
         
         // Convertir les indices en heures UTC pour clarification
         const timeSlots = usedIndices.map(idx => {
@@ -471,7 +471,7 @@ class CapacityCalculator {
       }
 
       const agentsAtThisSlot = this.countActiveAgents(selectedAgentProfiles, hourMinuteStr);
-      console.log(`Agents at ${hourMinuteStr}:`, agentsAtThisSlot); // Debug log
+      // console.log(`Agents at ${hourMinuteStr}:`, agentsAtThisSlot); // Debug log
 
       const sivReduction = this.getSIVReduction(periodCode, dayType, utcTimestamp, sivHypothesis); // Pass utcTimestamp
       console.log(`SIV Reduction at ${hourMinuteStr}:`, sivReduction); // Debug log

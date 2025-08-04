@@ -154,20 +154,20 @@ td { transition: background-color 0.3s ease; }
 /* --- D3.js Heatmap --- */
 #d3-heatmap-container {
     margin-top: 2rem;
-    padding: 1.5rem;
+    padding: 0.5rem; /* Réduire le padding pour maximiser l'espace du tableau */
     background-color: var(--card-background);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    overflow-x: auto; /* Permet le défilement horizontal si la carte est trop large */
+    overflow: hidden; /* Supprimer les barres de défilement */
     min-height: 650px; /* Hauteur minimale pour être plus gros */
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch; /* Étirer le contenu pour occuper tout l'espace */
 }
 
 #d3-heatmap-container h2 {
     text-align: center;
-    margin-bottom: 1.5rem;
+    margin: 0.5rem 0 1rem 0; /* Réduire les marges du titre */
     color: var(--text-primary);
 }
 
@@ -175,6 +175,9 @@ td { transition: background-color 0.3s ease; }
     background-color: var(--card-background); /* Utiliser la couleur de fond des cartes */
     border-radius: var(--radius);
     overflow: visible; /* Permet aux labels des axes de ne pas être coupés */
+    width: 100% !important; /* Forcer le SVG à occuper toute la largeur */
+    height: auto !important; /* Hauteur automatique pour s'adapter */
+    max-width: 100%; /* S'assurer que le SVG ne dépasse pas */
 }
 
 .cell {
@@ -209,10 +212,11 @@ td { transition: background-color 0.3s ease; }
     display: flex;
     justify-content: center;
     gap: 2rem;
-    margin-top: 1.5rem;
-    padding: 1rem;
+    margin-top: 0.5rem; /* Réduire l'espace au-dessus de la légende */
+    padding: 0.5rem; /* Réduire le padding de la légende */
     background: rgba(0,0,0,0.1);
     border-radius: var(--radius);
+    flex-shrink: 0; /* Empêcher la légende de se rétrécir */
 }
 
 .heatmap-legend-d3 .legend-item {

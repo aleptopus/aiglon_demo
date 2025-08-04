@@ -512,15 +512,23 @@ window.AiglonCore = (function() {
             }
         });
 
-        const margin = { top: 50, right: 20, bottom: 50, left: 300 };
+        const margin = { top: 30, right: 10, bottom: 40, left: 120 }; // Réduire les marges
         const numSlots = 96;
 
-        const containerWidth = parseInt(container.style("width")) || document.getElementById('d3-heatmap-container').clientWidth;
-        const dynamicCellSize = (containerWidth - margin.left - margin.right) / numSlots;
-        const cellSize = Math.max(10, dynamicCellSize);
-
-        const width = numSlots * cellSize;
-        const height = yLabels.length * cellSize;
+        // Obtenir les dimensions réelles du conteneur
+        const containerElement = document.getElementById('d3-heatmap-container');
+        const containerWidth = containerElement.clientWidth;
+        const containerHeight = containerElement.clientHeight;
+        
+        // Calculer les dimensions optimales pour occuper tout l'espace
+        const availableWidth = containerWidth - margin.left - margin.right;
+        const availableHeight = containerHeight - margin.top - margin.bottom - 100; // Réserver 100px pour le titre et la légende
+        
+        const cellWidth = availableWidth / numSlots;
+        const cellHeight = Math.min(availableHeight / yLabels.length, 25); // Limiter la hauteur des cellules à 25px max
+        
+        const width = numSlots * cellWidth;
+        const height = yLabels.length * cellHeight;
 
         const gridNameMapping = {
             "SemCha": "Semaine Chargée", "SamCha": "Samedi Chargé", "DimCha": "Dimanche Chargée",
@@ -532,13 +540,15 @@ window.AiglonCore = (function() {
         container.append("h2").text(`Détails des vacations de la période ${displayGridName}`).attr("class", "card-title");
 
         const svg = container.append("svg")
-            .attr("width", width + margin.left + margin.right)
+            .attr("width", "100%") // Utiliser 100% de la largeur
             .attr("height", height + margin.top + margin.bottom)
+            .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`) // Ajouter viewBox pour la responsivité
+            .attr("preserveAspectRatio", "xMinYMin meet") // Maintenir les proportions
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
-        const x = d3.scaleBand().range([0, width]).domain(d3.range(numSlots)).paddingInner(0.05);
-        const y = d3.scaleBand().range([0, height]).domain(yLabels).paddingInner(0.05);
+        const x = d3.scaleBand().range([0, width]).domain(d3.range(numSlots)).paddingInner(0.02); // Réduire l'espacement
+        const y = d3.scaleBand().range([0, height]).domain(yLabels).paddingInner(0.02); // Réduire l'espacement
 
         const colorScale = (value) => {
             switch (value) {
@@ -574,7 +584,7 @@ window.AiglonCore = (function() {
             });
 
         const xAxis = d3.axisBottom(x)
-            .tickValues(d3.range(0, numSlots, 4))
+            .tickValues(d3.range(0, numSlots, 8)) // Réduire le nombre de ticks pour éviter l'encombrement
             .tickFormat(d => {
                 const hour = Math.floor(d / 4) + 4;
                 return `${String(hour % 24).padStart(2, '0')}h`;
@@ -586,9 +596,9 @@ window.AiglonCore = (function() {
         svg.append("g").attr("class", "y-axis").call(yAxis)
             .selectAll("text")
             .attr("text-anchor", "end")
-            .attr("dx", "-1em")
-            .attr("dy", d => y.bandwidth() / 2 + 4)
-            .style("font-size", "12px")
+            .attr("dx", "-0.5em") // Réduire l'espacement
+            .attr("dy", d => y.bandwidth() / 2 + 2) // Centrer verticalement
+            .style("font-size", "11px") // Réduire légèrement la taille de police
             .style("fill", "var(--text-secondary)");
 
         svg.selectAll(".x-axis text").style("fill", "var(--text-secondary)");
@@ -598,7 +608,7 @@ window.AiglonCore = (function() {
             { value: '1', label: 'Actif', color: 'rgba(128, 0, 128, 0.7)' },
             { value: 'C', label: 'Chef', color: 'rgba(255, 0, 0, 0.7)' },
             { value: 'P', label: 'Pause', color: 'rgba(135, 206, 235, 0.7)' },
-            { value: 'R', label: 'Repos', color: 'rgba(255, 165, 0, 0.7)' }
+            { value: 'R', label: 'Repas', color: 'rgba(255, 165, 0, 0.7)' }
         ];
 
         const legend = container.append("div").attr("class", "heatmap-legend-d3");
@@ -616,7 +626,7 @@ window.AiglonCore = (function() {
     }
 
     function getVacationStatusName(code) {
-        const types = { '1': 'Actif', 'C': 'Chef', 'P': 'Pause', 'R': 'Repos' };
+        const types = { '1': 'Actif', 'C': 'Chef', 'P': 'Pause', 'R': 'Repas' };
         return types[code] || 'Vide';
     }
 

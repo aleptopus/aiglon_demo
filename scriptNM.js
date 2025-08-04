@@ -645,8 +645,35 @@ window.AiglonNM = (function() {
             });
         }
 
+        // Détruire tout graphique existant de manière plus robuste
         const trafficChart = core.getState('trafficChart');
-        if (trafficChart) trafficChart.destroy();
+        if (trafficChart) {
+            try {
+                trafficChart.destroy();
+            } catch (e) {
+                console.warn('Erreur lors de la destruction du graphique:', e);
+            }
+        }
+        
+        // Nettoyer le canvas et détruire toute instance Chart.js restante
+        const canvas = elements.chartCanvas;
+        if (canvas && typeof canvas.getContext === 'function') {
+            // Vérifier s'il y a une instance Chart.js attachée au canvas
+            if (canvas.chart) {
+                try {
+                    canvas.chart.destroy();
+                } catch (e) {
+                    console.warn('Erreur lors de la destruction du graphique canvas:', e);
+                }
+            }
+            
+            // Nettoyer le contexte
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        // Réinitialiser l'état du graphique
+        core.setState('trafficChart', null);
         
         setTimeout(() => {
             const newTrafficChart = new Chart(elements.chartCanvas, {
@@ -672,6 +699,9 @@ window.AiglonNM = (function() {
                          tooltip: {
                              enabled: true, mode: 'index',
                              titleAlign: 'center', bodyAlign: 'center', footerAlign: 'center',
+                             titleFont: { size: 14, weight: 'bold' },
+                             bodyFont: { size: 13 },
+                             footerFont: { size: 14, weight: 'bold' },
                              callbacks: {
                                  title: function(context) {
                                      const label = context[0].label;
@@ -692,20 +722,43 @@ window.AiglonNM = (function() {
                                  },
                                  label: function(context) {
                                      let labelText = context.dataset.label;
-                                     labelText = labelText.replace('Arrivées', 'Arr').replace('Départs', 'Dep');
+                                     // Remplacer les mots longs par des abréviations
+                                     labelText = labelText.replace(/ARRIVÉES/g, 'Arr')
+                                                         .replace(/ARRIVEES/g, 'Arr')
+                                                         .replace(/DÉPARTS/g, 'Dep')
+                                                         .replace(/DEPARTS/g, 'Dep');
+                                     
                                      const value = context.parsed.y;
                                      const formattedValue = value.toFixed(0);
+                                     
+                                     // Ne pas afficher la capacité ici, elle sera dans le footer
+                                     if (labelText === 'Capacité') {
+                                         return null; // Masquer la capacité dans les labels
+                                     }
+                                     
                                      return ` ${labelText}: ${formattedValue}`;
                                  },
                                  footer: function(context) {
                                      let totalTrafic = 0;
+                                     let capaciteValue = 0;
+                                     
                                      context.forEach(item => {
                                          if (item.dataset.type === 'bar' && !item.dataset.hidden && item.dataset.label !== 'Capacité') {
                                              totalTrafic += item.parsed.y;
                                          }
+                                         if (item.dataset.label === 'Capacité') {
+                                             capaciteValue = item.parsed.y;
+                                         }
                                      });
+                                     
                                      const formattedTotal = totalTrafic.toFixed(0);
-                                     return `\nTrafic total: ${formattedTotal}`;
+                                     let footer = `\nTrafic total: ${formattedTotal}`;
+                                     
+                                     if (capaciteValue > 0) {
+                                         footer += `\nCapacité: ${capaciteValue.toFixed(0)}`;
+                                     }
+                                     
+                                     return footer;
                                  }
                              }
                          }
@@ -736,7 +789,7 @@ window.AiglonNM = (function() {
                  }
             });
             core.setState('trafficChart', newTrafficChart);
-        }, 0);
+        }, 100); // Augmenter le délai pour éviter les conditions de course
     }
     
     // --- Synthesis Content for Predict NM ---
