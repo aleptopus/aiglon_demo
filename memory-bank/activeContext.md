@@ -4,28 +4,43 @@
 *   **Comportement par défaut au démarrage :** L'application affiche par défaut les données du jour actuel, avec la date de fin également définie sur le jour actuel, et la grille de vacation appropriée est sélectionnée.
 *   **Incohérence du calcul de capacité :** Résolu. La logique de sélection des agents a été ajustée pour respecter la sélection personnalisée de l'utilisateur et la sélection automatique par défaut a été alignée sur les attentes de l'utilisateur (3 Je / 7 M / 7 J / 8 SN).
 *   **Bug d'affichage TMA :** Résolu. Les données TMA sont maintenant correctement agrégées et affichées dans le graphique et le résumé.
-*   **Bug de calcul TMA :** Corrigé. La logique de calcul du TMA dans `updateMainChart`, `updateSummaryCards`, et `updateSummaryTable` a été restaurée à la logique initiale, assurant une agrégation correcte des valeurs TMA (somme des occurrences uniques par créneau horaire, sans division par `numDays` dans `calculateRollingSum` pour le TMA).
+*   **Bug de calcul TMA :** Corrigé. La logique de calcul du TMA a été ajustée pour correspondre aux formats horaires TMA et les valeurs horaires ont été divisées par 4 pour les distribuer sur des créneaux de 15 minutes.
+*   **Surestimation TMA/jour :** **RÉSOLU (04/08/2025).** Le calcul TMA dans les blocs statistiques était surestimé d'un facteur 3-4. Correction implémentée en utilisant directement les valeurs `d.tma` déjà divisées par 4.
 
 **Changements Récents :**
 
-*   **`script.js`** :
-    *   Correction d'une faute de frappe dans `document.getElementById('dateEndInput')`.
-    *   Dans `handleCohorFile()`, ajout de la logique pour effacer les données TMA (`state.tmaMap.clear()`) et réinitialiser l'affichage du nom du fichier TMA (`elements.jsonName.textContent = 'Aucun fichier'`) lors du chargement d'un nouveau fichier COHOR.
-    *   Dans `initializeApplication()`, la détermination de `initialDate` pour la source 'cohor' utilise maintenant `state.combinedData` pour obtenir la plage de dates correcte.
-    *   Correction du calcul de `numDays` dans `updateDashboard` pour les données COHOR, afin qu'il prenne en compte le filtrage par date et jour de la semaine.
-    *   Restauration de la logique de calcul initiale pour le TMA dans `updateMainChart`, `updateSummaryCards`, et `updateSummaryTable`, assurant une agrégation correcte des valeurs TMA (somme des occurrences uniques par créneau horaire, sans division par `numDays` dans `calculateRollingSum` pour le TMA).
-    *   Les fonctions `updateSummaryCards` et `updateSummaryTable` ont été ajustées pour utiliser la logique d'agrégation correcte du TMA (somme des occurrences uniques par jour).
-    *   Correction de la catégorisation du trafic LFLU (LU) dans `processPredictNMFile` pour regrouper les arrivées et départs LFLU sous 'départs_LU'.
+*   **Refactorisation Modulaire :**
+    *   Le fichier `script.js` a été refactorisé en trois modules distincts pour une meilleure maintenabilité et organisation du code :
+        *   **`scriptCore.js`** : Contient la logique partagée, la gestion de l'état global, les éléments d'interface utilisateur communs, et les fonctions de calcul de capacité.
+        *   **`scriptCohor.js`** : Gère le traitement des fichiers COHOR et TMA, ainsi que les visualisations spécifiques à ces données.
+        *   **`scriptNM.js`** : Gère le traitement des fichiers Predict NM et les affichages associés.
+    *   **`index.html`** : Mis à jour pour charger les nouveaux modules (`scriptCore.js`, `scriptCohor.js`, `scriptNM.js`) au lieu de l'ancien `script.js`.
+    *   **Corrections d'initialisation des modules :** Les problèmes d'affichage des contrôles de capacité et de la grille de vacation ont été résolus en exposant `handleGridSelection` dans `scriptCore.js` et en l'appelant directement depuis les modules spécifiques (`scriptCohor.js` et `scriptNM.js`) lors de leur initialisation.
 
-**Changements Récents (28/07/2025) :**
+**Améliorations Majeures (04/08/2025) :**
 
-*   **Correction du calcul et du nommage du trafic "LU" dans `processPredictNMFile` :**
-    *   Le label "départs_LU" a été renommé en "LU".
-    *   La logique de catégorisation a été ajustée pour regrouper correctement tous les vols impliquant l'aéroport LFLU, que ce soit en arrivée, départ, ou transit.
-*   **Correction du bug d'affichage de la liste des vols Predict NM :**
-    *   Le bouton "Afficher/Masquer" pour la liste des vols Predict NM a été déplacé en dehors du conteneur qu'il contrôle pour éviter les conflits.
-    *   L'état initial du bouton a été ajusté pour refléter l'état caché de la liste.
+*   **Interface Différenciée Vue COHOR vs Vue NM :**
+    *   **Vue COHOR :** Interface complète inchangée avec tous les blocs statistiques
+    *   **Vue NM :** Interface épurée sans blocs statistiques (Départs/jour, Arrivées/jour, TMA/jour, Total/jour)
+    *   **Gestion dynamique :** Basculement automatique des éléments UI selon la source de données active
 
-**Prochaines Étapes :**
-*   Mettre à jour `memory-bank/techContext.md` pour inclure `Chart.js` et `D3.js`.
-*   Mettre à jour `memory-bank/progress.md` pour refléter les tâches résolues concernant les bugs de calcul et d'affichage du TMA, ainsi que la gestion des dates et fuseaux horaires.
+*   **Système de Filtrage Avancé pour Vue NM :**
+    *   **Remplacement du filtre général** par des filtres individuels par colonne
+    *   **Filtres par colonne :** Heure, ARCID, Type Avion, ADEP, ADES
+    *   **Filtre par plage horaire :** Support des formats "12h00-13h00", "12h-13h", "12:00-13:00"
+    *   **Filtrage combinable :** Tous les filtres peuvent être utilisés simultanément
+
+*   **Suppression du bloc "Résumé des imports Predict NM"** en vue NM pour une interface plus épurée
+
+**Changements Techniques Récents :**
+
+*   **`scriptCohor.js` :** Correction du calcul TMA dans `updateSummaryCards()` et `updateSummaryTable()`
+*   **`scriptNM.js` :** Implémentation des filtres par colonne avec `setupColumnFilters()` et `matchesTimeRange()`
+*   **`index.html` :** Ajout d'une ligne de filtres dans l'en-tête du tableau NM
+*   **`style.css` :** Nouveaux styles pour les filtres par colonne (`.column-filter`, `.filter-row`)
+
+**État Actuel :**
+*   **Projet Complet :** Toutes les fonctionnalités demandées sont implémentées et opérationnelles
+*   **Interface Optimisée :** Chaque vue (COHOR/NM) a une interface adaptée à ses besoins spécifiques
+*   **Filtrage Avancé :** Système de filtrage granulaire pour une meilleure analyse des données NM
+*   **Calculs Précis :** Tous les bugs de calcul TMA ont été corrigés

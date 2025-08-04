@@ -167,10 +167,6 @@
                             <h2 class="card-title">Liste des vols Predict NM</h2>
                             <button id="togglePredictNMTableBtn" class="button-secondary toggle-button">Afficher</button>
                         </div>
-                        <div class="controls-row">
-                            <label for="predictNMFilterInput">Filtrer les vols:</label>
-                            <input type="text" id="predictNMFilterInput" class="text-input" placeholder="Rechercher par ARCID, ADES, ADEP...">
-                        </div>
                         <div class="table-container hidden" id="predictNMTableContainer">
                             <table id="predictNMTable">
                                 <thead>
@@ -180,6 +176,23 @@
                                         <th>Type Avion</th>
                                         <th>ADEP</th>
                                         <th>ADES</th>
+                                    </tr>
+                                    <tr class="filter-row">
+                                        <th>
+                                            <input type="text" id="timeRangeFilter" class="column-filter" placeholder="12h00-13h00">
+                                        </th>
+                                        <th>
+                                            <input type="text" id="arcidFilter" class="column-filter" placeholder="Filtrer ARCID">
+                                        </th>
+                                        <th>
+                                            <input type="text" id="atypFilter" class="column-filter" placeholder="Filtrer Type">
+                                        </th>
+                                        <th>
+                                            <input type="text" id="adepFilter" class="column-filter" placeholder="Filtrer ADEP">
+                                        </th>
+                                        <th>
+                                            <input type="text" id="adesFilter" class="column-filter" placeholder="Filtrer ADES">
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -203,6 +216,9 @@
     <script src="sivRules.js"></script>
     <script src="vacationGrids.js"></script>
     <script src="CapacityCalculator.js"></script>
-    <script src="script.js"></script>
+    <script src="scriptCore.js"></script>
+    <script src="scriptCohor.js"></script>
+    <script src="scriptNM.js"></script>
+    <!-- Le fichier script.js original n'est plus nécessaire -->
 </body>
 </html>

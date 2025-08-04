@@ -25,20 +25,22 @@
   - Responsive layout for different screen sizes.
 
 ## What's Left to Build
-- **No outstanding tasks.** All identified bugs have been resolved.
+- **Toutes les fonctionnalités principales sont implémentées.** Le projet est maintenant complet avec toutes les améliorations demandées.
 
 ## Current Status
 - **Stable and Functional:** The dashboard is in a stable state with all core features implemented and tested.
-- **Bug Fixes Completed:**
-  - **LU Traffic Calculation:** Corrected the logic to group all LFLU-related traffic under the 'LU' category.
-  - **Predict NM List Display:** Fixed the toggle button functionality for the Predict NM flight list.
-  - **Date Filtering:** Resolved issues with date range calculations.
-  - **TMA Data Display:** Corrected aggregation and display of TMA data.
-  - **Capacity Calculation:** Ensured consistent agent selection and calculation logic.
+- **Interface Différenciée Implémentée :** Les vues COHOR et NM ont maintenant des interfaces adaptées à leurs besoins spécifiques.
+- **Filtrage Avancé Terminé :** Les filtres par colonne et par plage horaire sont opérationnels pour la vue NM.
 
 ## Known Issues
 - **None.** All previously identified issues have been addressed.
 
 ## Recent Updates
-- **28/07/2025:** Completed bug fixes for LU traffic calculation and Predict NM list display.
-- **28/07/2025:** Updated documentation to reflect all resolved issues.
+- **04/08/2025:** Refactorisation modulaire de `script.js` en `scriptCore.js`, `scriptCohor.js`, et `scriptNM.js` terminée.
+- **04/08/2025:** Correction du bug de calcul TMA (division par 4 pour les créneaux de 15 minutes) implémentée et vérifiée.
+- **04/08/2025:** **NOUVELLES AMÉLIORATIONS MAJEURES :**
+  - **Correction du calcul TMA/jour** : Résolution de la surestimation d'un facteur 3-4 dans les blocs statistiques COHOR
+  - **Interface différenciée** : Vue NM épurée sans blocs statistiques non pertinents
+  - **Filtres avancés NM** : Remplacement du filtre général par des filtres par colonne avec support des plages horaires
+  - **Formats de plage horaire** : Support des formats "12h00-13h00", "12h-13h", et "12:00-13:00"
+- **04/08/2025:** Mise à jour complète de la documentation de la memory-bank pour refléter tous les changements.

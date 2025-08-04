@@ -10,8 +10,12 @@
 
 ## Development Setup & Constraints
 *   **Frontend-only**: All logic and data processing occur within the browser. No backend services are required for this feature.
-*   **Modular Design**: Code is organized into separate files (e.g., `script.js`, `CapacityCalculator.js`, `vacationGrids.js`, `sivRules.js`, `tmaData.js`) for better maintainability.
-*   **State Management**: A global `state` object in `script.js` manages the application's current data and configuration.
+*   **Architecture Modulaire :** Le code est maintenant organisé en modules distincts pour une meilleure maintenabilité et une séparation claire des préoccupations :
+    *   **`scriptCore.js`** : Contient la logique partagée, la gestion de l'état global, les éléments d'interface utilisateur communs, et les fonctions de calcul de capacité.
+    *   **`scriptCohor.js`** : Gère le traitement des fichiers COHOR et TMA, ainsi que les visualisations spécifiques à ces données. Inclut la correction du calcul TMA.
+    *   **`scriptNM.js`** : Gère le traitement des fichiers Predict NM et les affichages associés. Inclut le système de filtrage avancé par colonne.
+*   **Gestion de l'État :** L'état global de l'application est géré au sein de `scriptCore.js`.
+*   **Interface Différenciée :** Gestion dynamique de l'affichage des éléments UI selon la source de données active (`cohor` vs `predictNM`).
 
 ## Dependencies
 *   **Chart.js**: For charting capabilities.
@@ -20,3 +24,25 @@
 *   **`sivRules.js`**: Contains specific rules related to SIV hypotheses.
 *   **`vacationGrids.js`**: Provides data for agent vacation schedules.
 *   **Predict NM Files (.txt)**: A new data source processed differently, displaying specific information such as the number of traffics per day and the import date/time.
+
+## Nouvelles Fonctionnalités (04/08/2025)
+
+### Interface Différenciée
+*   **Gestion Dynamique UI**: Basculement automatique des éléments d'interface selon la source de données (`activeDataSource`)
+*   **Vue COHOR**: Interface complète avec tous les blocs statistiques
+*   **Vue NM**: Interface épurée sans blocs statistiques non pertinents
+
+### Système de Filtrage Avancé (Vue NM)
+*   **Filtres par Colonne**: Champs de saisie individuels pour chaque colonne du tableau
+*   **Filtre par Plage Horaire**: Support des formats flexibles ("12h00-13h00", "12h-13h", "12:00-13:00")
+*   **Filtrage Combinable**: Tous les filtres peuvent être utilisés simultanément
+*   **Mise à Jour Temps Réel**: Filtrage instantané lors de la saisie
+
+### Corrections de Calculs
+*   **Calcul TMA Corrigé**: Résolution de la surestimation d'un facteur 3-4 dans les blocs statistiques COHOR
+*   **Logique Optimisée**: Utilisation directe des valeurs `d.tma` déjà divisées par 4
+
+### Améliorations Techniques
+*   **Event Listeners Dynamiques**: Configuration automatique des filtres lors de l'initialisation
+*   **Validation de Format**: Gestion robuste des différents formats de plage horaire
+*   **Performance Optimisée**: Filtrage côté client sans impact sur les performances
