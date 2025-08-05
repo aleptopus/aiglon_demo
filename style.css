@@ -484,8 +484,8 @@ td { transition: background-color 0.3s ease; }
 }
 
 /* --- Tooltips avec police plus grande --- */
-.data-source-btn[title]:hover::after {
-    content: attr(title);
+.data-source-btn[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
     position: absolute;
     bottom: 100%;
     left: 50%;
@@ -506,7 +506,7 @@ td { transition: background-color 0.3s ease; }
     pointer-events: none;
 }
 
-.data-source-btn[title]:hover::before {
+.data-source-btn[data-tooltip]:hover::before {
     content: '';
     position: absolute;
     bottom: 100%;

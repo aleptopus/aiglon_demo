@@ -93,3 +93,4 @@
     *   **Gestion IFR :** Nouvelle fonctionnalité de limitation de capacité selon l'état de la salle IFR
     *   **Chargement Automatique :** Système de boutons automatiques entièrement fonctionnel
     *   **Expérience Utilisateur Améliorée :** Plus besoin de sélectionner manuellement les fichiers
+    *   **Dates de Mise à Jour Dynamiques (05/08/2025) :** Les dates "màj le XX/XX/XXXX" sous les boutons COHOR sont maintenant automatiquement mises à jour selon la date de génération des fichiers par les scripts Python

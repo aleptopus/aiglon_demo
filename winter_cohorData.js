@@ -5,7 +5,8 @@
  * Utilisé par le bouton "Aiglon futé saison hiver 2025"
  */
 
-// Variable globale accessible depuis dataLoader.js
+// Variables globales accessibles depuis dataLoader.js
+window.winterUpdateDate = "2025-08-05";
 window.winterCohorDataCSV = `N/D;Airport;Flight Number;A/D;Time;From;To;Ops Days;Org/Nxt;Prv/Fin;Seats;A/C;STC;Frequency;Wait;;;;Season;Rotation ID;Code;Registration;Last Update;
 N;LYS;AC  876;A;0905;20251026;20251102;0004067;YUL;YUL;297;333;J;1;;;;;W25;0;;;16JUL25 1614;
 N;LYS;AC  876;A;1005;20251106;20251214;0004067;YUL;YUL;297;333;J;1;;;;;W25;1;;;16JUL25 1614;

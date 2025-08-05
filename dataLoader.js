@@ -47,8 +47,18 @@ async function loadCohorData(season) {
             throw new Error(`Source COHOR ${season} non trouvée`);
         }
 
+        // Debug: vérifier les variables disponibles
+        console.log('Variables window disponibles:', {
+            summerCohorDataCSV: typeof window.summerCohorDataCSV,
+            winterCohorDataCSV: typeof window.winterCohorDataCSV,
+            summerUpdateDate: window.summerUpdateDate,
+            winterUpdateDate: window.winterUpdateDate
+        });
+        
         const csvData = source.cohorData();
         const tmaData = source.tmaData();
+        
+        console.log(`Données ${season}:`, { csvData: csvData ? 'disponible' : 'non disponible', tmaData: tmaData ? 'disponible' : 'non disponible' });
         
         if (!csvData) {
             throw new Error(`Données COHOR ${season} non disponibles`);
@@ -80,6 +90,13 @@ async function loadCohorData(season) {
             
         } else {
             throw new Error('Module AiglonCohor non disponible');
+        }
+
+        // Mettre à jour la date de mise à jour dans l'interface
+        const updateDateElement = season === 'summer' ? document.getElementById('summerDataStatus') : document.getElementById('winterDataStatus');
+        const updateDate = season === 'summer' ? window.summerUpdateDate : window.winterUpdateDate;
+        if (updateDateElement && updateDate) {
+            updateDateElement.textContent = `màj le ${updateDate.split('-').reverse().join('/')}`;
         }
         
     } catch (error) {
