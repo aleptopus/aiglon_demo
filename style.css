@@ -36,16 +36,30 @@ main { display: flex; flex-direction: column; gap: 1.5rem; }
 /* --- Data Source Buttons --- */
 .data-source-section { flex: 1; }
 .data-source-btn {
-    background-color: var(--accent-orange);
-    color: var(--background);
+    background-color: var(--border);
+    color: var(--text-secondary);
     width: 100%;
     font-weight: 600;
     transition: all 0.3s ease;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    cursor: pointer;
 }
 .data-source-btn:hover {
     background-color: var(--accent-orange-hover);
+    color: var(--background);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(255, 158, 100, 0.3);
+}
+.data-source-btn.selected {
+    background-color: var(--accent-orange);
+    color: var(--background);
+    border-color: var(--accent-orange);
+}
+.data-source-btn.selected:hover {
+    background-color: var(--accent-orange-hover);
 }
 .data-source-btn:disabled {
     background-color: var(--border);
@@ -467,6 +481,46 @@ td { transition: background-color 0.3s ease; }
 .column-filter::placeholder {
     color: var(--text-secondary);
     opacity: 0.7;
+}
+
+/* --- Tooltips avec police plus grande --- */
+.data-source-btn[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: calc(var(--radius) - 2px);
+    font-size: 0.95rem;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: normal;
+    max-width: 300px;
+    width: max-content;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    margin-bottom: 0.5rem;
+    pointer-events: none;
+}
+
+.data-source-btn[title]:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.9);
+    margin-bottom: -6px;
+    z-index: 1001;
+    pointer-events: none;
+}
+
+.data-source-btn {
+    position: relative;
 }
 
 /* --- Responsive --- */

@@ -78,6 +78,20 @@ window.AiglonNM = (function() {
         }
         return 'tma'; // Tous les autres vols font partie du groupe TMA (Transits TMA)
     }
+    
+    // --- Fonction pour formater une date en français ---
+    function formatDateToFrench(dateObj) {
+        const daysOfWeek = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+        const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+                       'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+        
+        const dayName = daysOfWeek[dateObj.getUTCDay()];
+        const day = dateObj.getUTCDate();
+        const month = months[dateObj.getUTCMonth()];
+        const year = dateObj.getUTCFullYear();
+        
+        return `${dayName} ${day} ${month} ${year}`;
+    }
 
     // --- Fonction pour déterminer si un vol est interne TMA ---
     function isInternalTMAFlight(adep, ades) {
@@ -320,12 +334,6 @@ window.AiglonNM = (function() {
             }
         });
 
-        flightsForSelectedDates.sort((a, b) => {
-            const timeA = a.entry.split(':').map(Number);
-            const timeB = b.entry.split(':').map(Number);
-            if (timeA[0] !== timeB[0]) return timeA[0] - timeB[0];
-            return timeA[1] - timeB[1];
-        });
 
         // Récupérer les valeurs des filtres par colonne
         const timeRangeFilter = document.getElementById('timeRangeFilter')?.value.toLowerCase() || '';
@@ -440,13 +448,16 @@ window.AiglonNM = (function() {
         }
 
         core.setState('currentStartDate', initialDate);
-        core.setState('currentEndDate', initialDate); // Single day view by default
+        core.setState('currentEndDate', initialDate); // Single day view by default - always same as start date
         core.setState('windowDurationMs', 0); // For single day, duration is 0
 
-        // Set input values visually
+        // Set input values visually - in NM view, end date always equals start date
         const parisDateFormatter = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Europe/Paris' });
         elements.dateStartInput.value = parisDateFormatter.format(core.getState('currentStartDate'));
-        elements.dateEndInput.value = parisDateFormatter.format(core.getState('currentEndDate'));
+        elements.dateEndInput.value = parisDateFormatter.format(core.getState('currentStartDate')); // Always same as start date
+        
+        // Disable end date input in NM view since it's single day only
+        elements.dateEndInput.disabled = true;
 
         // Automatically select the grid for the current start date
         const capacityCalculator = core.getCapacityCalculator();
@@ -516,7 +527,10 @@ window.AiglonNM = (function() {
     
     // --- Main Chart for Predict NM ---
     function updateMainChart(numDays, activeDays, activeTraffic) {
-        elements.chartTitle.textContent = `Trafic moyen par créneau horaire (Nombre de jours: ${numDays})`;
+        // Format the date in French for the chart title
+        const currentDate = core.getState('currentStartDate');
+        const frenchDate = formatDateToFrench(currentDate);
+        elements.chartTitle.textContent = `Trafic moyen par créneau horaire pour le ${frenchDate}`;
 
         let datasets = [];
         let labels = [];
@@ -767,10 +781,11 @@ window.AiglonNM = (function() {
                          }
                      },
                      scales: {
-                         x: { 
-                             stacked: core.getState('isStacked'), 
-                             ticks: { 
+                         x: {
+                             stacked: core.getState('isStacked'),
+                             ticks: {
                                  color: 'var(--text-secondary)',
+                                 font: { weight: 'bold' },
                                  callback: function(value, index, ticks) {
                                      const slot = this.getLabelForValue(value);
                                      const [h, m] = slot.split(':').map(Number);
@@ -784,10 +799,18 @@ window.AiglonNM = (function() {
                                         return `${String(localDate.getHours()).padStart(2, '0')}:${String(localDate.getMinutes()).padStart(2, '0')}`;
                                      }
                                  }
-                             }, 
-                             grid: { color: 'rgba(161, 170, 184, 0.2)' } 
+                             },
+                             grid: { color: 'rgba(161, 170, 184, 0.2)' }
                          },
-                         y: { stacked: core.getState('isStacked'), beginAtZero: true, ticks: { color: 'var(--text-secondary)' }, grid: { color: 'rgba(161, 170, 184, 0.2)' } }
+                         y: {
+                             stacked: core.getState('isStacked'),
+                             beginAtZero: true,
+                             ticks: {
+                                 color: 'var(--text-secondary)',
+                                 font: { size: 14, weight: 'bold' }
+                             },
+                             grid: { color: 'rgba(161, 170, 184, 0.2)' }
+                         }
                      }
                  }
             });
@@ -813,11 +836,15 @@ window.AiglonNM = (function() {
             block.style.borderRadius = 'var(--radius)';
 
             const dayTitle = document.createElement('h4');
-            dayTitle.textContent = `Journée ${data.metadata.FDATE}`;
+            // Format date to French format with orange color
+            const fdate = data.metadata.FDATE;
+            const dateObj = new Date(fdate + 'T00:00:00Z');
+            const frenchDate = formatDateToFrench(dateObj);
+            dayTitle.textContent = frenchDate;
             dayTitle.style.margin = '0 0 0.5rem 0';
             dayTitle.style.fontSize = '1.2rem';
             dayTitle.style.fontWeight = '600';
-            dayTitle.style.color = 'var(--text-primary)';
+            dayTitle.style.color = 'var(--accent-orange)'; // Orange color
             block.appendChild(dayTitle);
 
             const importDate = new Date(data.metadata.IMPDATE);

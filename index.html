@@ -25,22 +25,22 @@
                     <h2 class="card-title">Source des Données</h2>
                     <div class="controls-row">
                         <div class="data-source-section">
-                            <button id="loadSummerDataBtn" class="button data-source-btn">
-                                Aiglon futé saison été 2025
+                            <button id="loadSummerDataBtn" class="data-source-btn" title="Base de donnée COHOR et pattern temporel pour trafic TMA selon l'historique 2024. Analyse du trafic saisonnier. Il est possible de sélectionner une période et d'analyser le trafic moyen et max.">
+                                Aiglon futé été
                             </button>
-                            <p id="summerDataStatus" class="data-status-display">Prêt à charger</p>
+                            <p id="summerDataStatus" class="data-status-display">màj le 04/08/2025</p>
                         </div>
                         <div class="data-source-section">
-                            <button id="loadWinterDataBtn" class="button data-source-btn">
-                                Aiglon futé saison hiver 2025
+                            <button id="loadWinterDataBtn" class="data-source-btn" title="Base de donnée COHOR et pattern temporel pour trafic TMA selon l'historique 2024. Analyse du trafic saisonnier. Il est possible de sélectionner une période et d'analyser le trafic moyen et max.">
+                                Aiglon futé hiver
                             </button>
-                            <p id="winterDataStatus" class="data-status-display">Prêt à charger</p>
+                            <p id="winterDataStatus" class="data-status-display">màj le 04/08/2025</p>
                         </div>
                         <div class="data-source-section">
-                            <button id="loadNMPredictDataBtn" class="button data-source-btn">
+                            <button id="loadNMPredictDataBtn" class="data-source-btn" title="Base de donnée NM avec le B2B Eurocontrol et certificat PREOPS (non opérationnel valide pour des tests). Analyse journalier des 4 prochains jours">
                                 NM Predict
                             </button>
-                            <p id="nmPredictDataStatus" class="data-status-display">Prêt à charger</p>
+                            <p id="nmPredictDataStatus" class="data-status-display" style="display: none;"></p>
                         </div>
                     </div>
                 </div>
@@ -93,8 +93,8 @@
                                     </optgroup>
                                     <optgroup label="Période Creuse">
                                         <option value="SemCre">Semaine Creuse</option>
-                                        <option value="SamCre">Samedi Creux</option>
-                                        <option value="DimCre">Dimanche Creux</option>
+                                        <option value="SamCre">Samedi Creuse</option>
+                                        <option value="DimCre">Dimanche Creuse</option>
                                     </optgroup>
                                     <optgroup label="Période Hiver">
                                         <option value="SemHiv">Semaine Hiver</option>
@@ -204,7 +204,7 @@
                 </div>
                 
                 <div id="initialMessage" class="card">
-                    <p>Veuillez charger un fichier COHOR pour commencer...</p>
+                    <p>Veuillez charger une source de données pour commencer...</p>
                 </div>
             </main>
         </div>

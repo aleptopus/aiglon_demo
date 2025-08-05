@@ -56,9 +56,9 @@ window.AiglonCohor = (function() {
         elements.predictNMSummaryCard.classList.add('hidden');
         elements.predictNMTableCard.classList.add('hidden');
 
-        // Clear TMA data and UI when new COHOR is loaded
-        core.setState('tmaMap', new Map());
-        if (elements.jsonName) elements.jsonName.textContent = 'Aucun fichier';
+        // Don't clear TMA data when switching back to COHOR - preserve it for continuity
+        // core.setState('tmaMap', new Map());
+        // if (elements.jsonName) elements.jsonName.textContent = 'Aucun fichier';
 
         if (elements.csvName) elements.csvName.textContent = file.name;
         core.setState('activeDataSource', 'cohor');
@@ -184,11 +184,16 @@ window.AiglonCohor = (function() {
         core.setState('combinedData', combinedData);
     }
 
+
+
     // --- Application Initialization ---
     function initializeApplication(source) {
         elements.initialMsg.classList.add('hidden');
         elements.dashboard.classList.remove('hidden');
         [elements.dateStartInput, elements.dateEndInput].forEach(el => el.disabled = false);
+        
+        // Re-enable end date input for COHOR view (in case it was disabled by NM view)
+        elements.dateEndInput.disabled = false;
 
         let initialDate;
         if (source === 'cohor' && core.getState('cohorData').length > 0) {
@@ -353,7 +358,7 @@ window.AiglonCohor = (function() {
         const colorScale = d3.scaleLinear().domain([0, d3.max(allValues) || 1])
             .range(['rgba(36, 40, 59, 0.1)', 'rgba(255, 158, 100, 0.6)']);
 
-        summaryTableHead.innerHTML = `<tr><th>Métrique</th>${activeDays.map(i => `<th>${core.DAYS_OF_WEEK[i]}</th>`).join('')}</tr>`;
+        summaryTableHead.innerHTML = `<tr><th></th>${activeDays.map(i => `<th>${core.DAYS_OF_WEEK[i]}</th>`).join('')}</tr>`;
         summaryTableBody.innerHTML = '';
         
         metrics.forEach(metric => {
@@ -433,6 +438,7 @@ window.AiglonCohor = (function() {
                 stack: core.getState('isStacked') ? 'cohorTMA' : type.key
             };
         });
+
 
         if (core.getState('isStacked') && Object.keys(core.getState('grilleVacations')).length > 0) {
             let gridToUse = core.getState('selectedGrid') || 'SemCha';
@@ -521,6 +527,7 @@ window.AiglonCohor = (function() {
                                          return null; // Masquer la capacité dans les labels
                                      }
                                      
+                                     
                                      return ` ${labelText}: ${formattedValue}`;
                                  },
                                  footer: function(context) {
@@ -549,10 +556,11 @@ window.AiglonCohor = (function() {
                          }
                      },
                      scales: {
-                         x: { 
-                             stacked: core.getState('isStacked'), 
-                             ticks: { 
+                         x: {
+                             stacked: core.getState('isStacked'),
+                             ticks: {
                                  color: 'var(--text-secondary)',
+                                 font: { weight: 'bold' },
                                  callback: function(value, index, ticks) {
                                      const slot = this.getLabelForValue(value);
                                      const [h, m] = slot.split(':').map(Number);
@@ -566,10 +574,18 @@ window.AiglonCohor = (function() {
                                         return `${String(localDate.getHours()).padStart(2, '0')}:${String(localDate.getMinutes()).padStart(2, '0')}`;
                                      }
                                  }
-                             }, 
-                             grid: { color: 'rgba(161, 170, 184, 0.2)' } 
+                             },
+                             grid: { color: 'rgba(161, 170, 184, 0.2)' }
                          },
-                         y: { stacked: core.getState('isStacked'), beginAtZero: true, ticks: { color: 'var(--text-secondary)' }, grid: { color: 'rgba(161, 170, 184, 0.2)' } }
+                         y: {
+                             stacked: core.getState('isStacked'),
+                             beginAtZero: true,
+                             ticks: {
+                                 color: 'var(--text-secondary)',
+                                 font: { size: 14, weight: 'bold' }
+                             },
+                             grid: { color: 'rgba(161, 170, 184, 0.2)' }
+                         }
                      }
                  }
             });

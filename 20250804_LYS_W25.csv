@@ -1,12 +1,4 @@
-/**
- * 📊 DONNÉES COHOR SAISON HIVER 2025
- * 
- * Ce fichier contient les données de trafic COHOR pour la saison hiver.
- * Utilisé par le bouton "Aiglon futé saison hiver 2025"
- */
-
-// Variable globale accessible depuis dataLoader.js
-window.winterCohorDataCSV = `N/D;Airport;Flight Number;A/D;Time;From;To;Ops Days;Org/Nxt;Prv/Fin;Seats;A/C;STC;Frequency;Wait;;;;Season;Rotation ID;Code;Registration;Last Update;
+N/D;Airport;Flight Number;A/D;Time;From;To;Ops Days;Org/Nxt;Prv/Fin;Seats;A/C;STC;Frequency;Wait;;;;Season;Rotation ID;Code;Registration;Last Update;
 N;LYS;AC  876;A;0905;20251026;20251102;0004067;YUL;YUL;297;333;J;1;;;;;W25;0;;;16JUL25 1614;
 N;LYS;AC  876;A;1005;20251106;20251214;0004067;YUL;YUL;297;333;J;1;;;;;W25;1;;;16JUL25 1614;
 N;LYS;AC  876;A;1005;20251216;20260308;0204067;YUL;YUL;297;333;J;1;;;;;W25;2;;;16JUL25 1614;
@@ -1508,8 +1500,3 @@ N;LYS;WZZ4771;A;2110;20251028;20260328;0204060;SKP;SKP;239;32Q;J;1;;;;;W25;1497;
 N;LYS;WZZ4772;D;2145;20251028;20260328;0204060;SKP;SKP;239;32Q;J;1;;;;;W25;1498;;;03JUN25 1510;
 N;LYS;WZZ7951;A;0745;20251028;20260328;0200060;KUT;KUT;239;32Q;J;1;;;;;W25;1499;;;12JUN25 1442;
 N;LYS;WZZ7952;D;0820;20251028;20260328;0200060;KUT;KUT;239;32Q;J;1;;;;;W25;1500;;;12JUN25 1442;
-`;
-
-// ⬇️ COLLER VOS DONNÉES HIVER ICI ⬇️
-
-console.log('✅ Données COHOR hiver chargées');

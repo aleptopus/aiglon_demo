@@ -34,6 +34,14 @@ const DATA_SOURCES = {
  */
 async function loadCohorData(season) {
     try {
+        // Reset filters when changing data source
+        if (window.AiglonCore && window.AiglonCore.resetFilters) {
+            window.AiglonCore.resetFilters();
+        }
+        
+        // Update button states
+        updateButtonStates(season === 'summer' ? 'loadSummerDataBtn' : 'loadWinterDataBtn');
+        
         const source = DATA_SOURCES[season];
         if (!source || !source.cohorData) {
             throw new Error(`Source COHOR ${season} non trouvée`);
@@ -85,6 +93,14 @@ async function loadCohorData(season) {
  */
 async function loadNMPredictData() {
     try {
+        // Reset filters when changing data source
+        if (window.AiglonCore && window.AiglonCore.resetFilters) {
+            window.AiglonCore.resetFilters();
+        }
+        
+        // Update button states
+        updateButtonStates('loadNMPredictDataBtn');
+        
         const source = DATA_SOURCES.nmpredict;
         const nmData = source.nmData();
         
@@ -99,10 +115,10 @@ async function loadNMPredictData() {
         
         // Traiter directement les données sans passer par FileReader
         if (window.AiglonNM) {
-            // Clear COHOR data and UI first
+            // Clear COHOR data but preserve TMA data for potential return to COHOR view
             const core = window.AiglonCore;
             core.setState('cohorData', []);
-            core.setState('tmaMap', new Map());
+            // Don't clear tmaMap to preserve TMA data: core.setState('tmaMap', new Map());
             core.setState('activeDataSource', 'predictNM');
             
             // Process each day's data directly
@@ -213,6 +229,24 @@ function processPredictNMFileContent(fileContent) {
 function isInternalTMAFlight(adep, ades) {
     const TMA_AIRPORTS = ['LFLY', 'LFLS', 'LFLU', 'LFLB', 'LFLP'];
     return TMA_AIRPORTS.includes(adep) && TMA_AIRPORTS.includes(ades);
+}
+
+/**
+ * Met à jour l'état visuel des boutons (sélectionné/non-sélectionné)
+ */
+function updateButtonStates(selectedButtonId) {
+    const buttons = ['loadSummerDataBtn', 'loadWinterDataBtn', 'loadNMPredictDataBtn'];
+    
+    buttons.forEach(buttonId => {
+        const button = document.getElementById(buttonId);
+        if (button) {
+            if (buttonId === selectedButtonId) {
+                button.classList.add('selected');
+            } else {
+                button.classList.remove('selected');
+            }
+        }
+    });
 }
 
 /**

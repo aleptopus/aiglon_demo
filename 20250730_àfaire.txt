@@ -1,4 +1,12 @@
-Dans la vue NM:
-- Les vols internes (par exemple LS-LB) sont compté comme des transits purs.
-Il faut dissocier en 2 et avoir un dep LS et une arrivée LB.
-- Bloc filtres interactifs activer les filtres jours de semaine et type trafic
+Au 4 août:
+
+- Vue Nm pour la synthèse remplacer les bilan par jour le titre au lieu de Journée aaaa-mm-jj plutôt mercredi 6 août 2025 et en orange.
+- remplacer creux par creuse
+- RAZ des filtres lors d'un changement de base de donnée
+- Dans la vue NM lorsque l'utilisateur choisi une date de début mettre de base la date de fin à la même date.
+- Page principale remplacer "Prêt à charger" par "màj le jj/mm/aaaa" avec la date de modification du fichier lié au bouton.
+- Remplacer "Veuillez charger un fichier COHOR pour commencer..." par "Veuillez charger une source de données pour commencer..."
+- REndre les 3 boutons des bases de données en couleur orange si sélectionnée
+- Au survol de la souris dur un des boutons avoir une fenetre qui explique la base de donnée.
+
+

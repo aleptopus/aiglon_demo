@@ -141,16 +141,23 @@ window.AiglonCore = (function() {
             selectedStartDateLocal.getMonth(),
             selectedStartDateLocal.getDate()
         ));
-        state.currentEndDate = new Date(Date.UTC(
-            selectedEndDateLocal.getFullYear(),
-            selectedEndDateLocal.getMonth(),
-            selectedEndDateLocal.getDate()
-        ));
-
-        const oneDay = 24 * 60 * 60 * 1000;
-        if (state.currentEndDate.getTime() - state.currentStartDate.getTime() === oneDay) {
+        
+        // In NM view, always sync end date with start date (single day only)
+        if (state.activeDataSource === 'predictNM') {
             state.currentEndDate = new Date(state.currentStartDate);
             elements.dateEndInput.value = elements.dateStartInput.value;
+        } else {
+            state.currentEndDate = new Date(Date.UTC(
+                selectedEndDateLocal.getFullYear(),
+                selectedEndDateLocal.getMonth(),
+                selectedEndDateLocal.getDate()
+            ));
+
+            const oneDay = 24 * 60 * 60 * 1000;
+            if (state.currentEndDate.getTime() - state.currentStartDate.getTime() === oneDay) {
+                state.currentEndDate = new Date(state.currentStartDate);
+                elements.dateEndInput.value = elements.dateStartInput.value;
+            }
         }
 
         state.windowDurationMs = state.currentEndDate.getTime() - state.currentStartDate.getTime();
@@ -642,6 +649,35 @@ window.AiglonCore = (function() {
         }, 250);
     });
 
+    // --- Filter Reset Function ---
+    function resetFilters() {
+        // Reset day toggles - check all days
+        document.querySelectorAll('#dayOfWeekToggles input[type="checkbox"]').forEach(cb => {
+            cb.checked = true;
+        });
+        
+        // Reset traffic type toggles - check all types
+        document.querySelectorAll('#trafficTypeToggles input[type="checkbox"]').forEach(cb => {
+            cb.checked = true;
+        });
+        
+        // Reset column filters for NM view
+        const columnFilters = ['timeRangeFilter', 'arcidFilter', 'atypFilter', 'adepFilter', 'adesFilter'];
+        columnFilters.forEach(filterId => {
+            const filterElement = document.getElementById(filterId);
+            if (filterElement) {
+                filterElement.value = '';
+            }
+        });
+        
+        // Re-enable end date input for COHOR view
+        if (state.activeDataSource === 'cohor') {
+            elements.dateEndInput.disabled = false;
+        }
+        
+        console.log('🔄 Filtres réinitialisés');
+    }
+
     // --- Public API ---
     return {
         // State Management
@@ -668,6 +704,7 @@ window.AiglonCore = (function() {
         DAYS_OF_WEEK: DAYS_OF_WEEK,
         
         handleGridSelection: handleGridSelection, // Expose function
+        resetFilters: resetFilters, // Expose reset function
 
         // Initialization
         init: function() {
